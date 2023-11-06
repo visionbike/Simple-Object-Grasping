@@ -63,7 +63,7 @@ if __name__ == '__main__':
         error_mean += cv2.norm(img_points[i], img_points_, cv2.NORM_L2) / len(img_points_)
     print(f'Re-projection error: {error_mean / len(obj_points)}')
 
-    w, h = im.shape[:2]
+    h, w = im.shape[:2]
     print(f'Image size (width, height): ({w}, {h})')
     # if using Alpha = 0, so we discard the black pixels from the distortion.
     # This helps make the entire region of interest is the full dimensions of the image (after `undistort`)
