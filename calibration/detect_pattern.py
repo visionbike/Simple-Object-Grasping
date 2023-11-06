@@ -1,5 +1,8 @@
 import cv2
 
+__all__ = ['SimplePatternDetector']
+
+
 # define valid contour parameter limits in pixels
 # MANUALLY EDIT
 MIN_AREA = 10  # 10 x 10
@@ -111,8 +114,8 @@ class SimplePatternDetector:
         points_detected = []
 
         if len(valid_ids) > 0:
-            for i in valid_ids:
-                contour = contours[i]
+            for i, idx in enumerate(valid_ids):
+                contour = contours[idx]
 
                 # get rectangle bounding box
                 x, y, w, h = cv2.boundingRect(contour)
@@ -123,12 +126,12 @@ class SimplePatternDetector:
                 cy = int(M['m01'] / M['m00'])
 
                 # draw bounding box
-                cv2.rectangle(im_out, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                # draw center
-                cv2.circle(im_out, (cx, cy), 2, (0, 255, 0), 2)
+                im_out = cv2.rectangle(im_out, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                # draw center of pattern
+                im_out = cv2.circle(im_out, (cx, cy), 2, (0, 255, 0), 2)
                 # draw the text
-                cv2.putText(im_out, f'Pt #{i}', (x - w, y + h + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
-                cv2.putText(im_out, f'{self._truncate(cx, 2)},{self._truncate(cy, 2)}', (x - w, y + h + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                im_out = cv2.putText(im_out, f'Pt {i}', (x - w, y + h + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                # cv2.putText(im_out, f'{self._truncate(cx, 2)},{self._truncate(cy, 2)}', (x - w, y + h + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
                 points_detected.append([x, y, w, h, cx, cy])
         self._preview_image('pattern detected', im_out, debug=debug)

@@ -2,7 +2,6 @@ from pathlib import Path
 import numpy as np
 import cv2
 
-
 CALIB_IMG_DIR = Path('calibration_images')
 CALIB_INFO_DIR = Path('calibration_info')
 CALIB_INFO_DIR.mkdir(parents=True, exist_ok=True)
@@ -55,7 +54,6 @@ if __name__ == '__main__':
     ret, mat_cam, dist, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, gray.shape[::-1], None, None)
 
     print('>>>> Verifying calibration...')
-
     # estimate re-projection error
     error_mean = 0.0
     for i in range(len(obj_points)):
