@@ -7,13 +7,14 @@ CALIB_IMG_DIR = Path('calibration_images')
 CALIB_INFO_DIR = Path('calibration_info')
 CALIB_INFO_DIR.mkdir(parents=True, exist_ok=True)
 
-# define the size in cm in chessboard
-SQR_SIZE = 2.5
+# define the size in mm in chessboard
+# MANUALLY EDIT
+SQR_SIZE = 19
 
 # define termination criteria
 CRITERIA = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-# prepare grid of object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+# prepare grid of object points, like (0,0,0), (1,0,0), (2,0,0) ....,(7,7,0)
 OBJ_IDX = np.zeros((7*7, 3), np.float32)
 # add SQR_SIZE to account for SQR_SIZE cm per square in grid
 OBJ_IDX[:, :2] = np.mgrid[0: 7, 0: 7].T.reshape(-1, 2) * SQR_SIZE
@@ -24,8 +25,7 @@ img_points = []     # 2d points in the image plane
 
 # define visualization window
 window_name = 'Verify'
-cv2.namedWindow(window_name, cv2.WND_PROP_FULLSCREEN)
-cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+cv2.namedWindow(window_name, cv2.WINDOW_FULLSCREEN)
 
 # define alpha argument for getting optimal new camera matrix after calibration
 ALPHA = 1

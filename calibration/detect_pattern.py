@@ -1,29 +1,26 @@
-from pathlib import Path
-import numpy as np
 import cv2
 
-
 # define valid contour parameter limits in pixels
-# MANUALLY modify
-MIN_AREA = 900      # 30 x 30
-MAX_AREA = 90000    # 300 x 300
+# MANUALLY EDIT
+MIN_AREA = 10  # 10 x 10
+MAX_AREA = 10000  # 100 x 100
 
 # define aspect ratio width/height
-# MANUALLY modify
-MIN_ASPECT_RATIO = 0.25     # 1/5
+# MANUALLY EDIT
+MIN_ASPECT_RATIO = 0.25  # 1/5
 MAX_ASPECT_RATIO = 5.0
 
 # define thresholds for Otsu method
-# MANUALLY modify
+# MANUALLY EDIT
 OTSU_SENSITIVITY = 22
 OTSU_LOW_THRESH = 45
 OTSU_HIGH_THRESH = 255
 
 
-class PatternRecognition:
+class SimplePatternDetector:
     def _truncate(self, val, decimals=0):
-        multiplier = 10**decimals
-        return int(1.0 * val * multiplier) / multiplier
+        multiplier = 10 ** decimals
+        return int(1.0 * val * multiplier) / int(multiplier)
 
     def _preview_image(self, dsc, im, timeout=2000, debug=False):
         if debug:
@@ -49,7 +46,8 @@ class PatternRecognition:
         self._preview_image('pre-diff blured', diff_gray_blur, debug=debug)
 
         # find Otsu's threshold image
-        ret, otsu_thresh = cv2.threshold(diff_gray_blur, OTSU_LOW_THRESH, OTSU_HIGH_THRESH, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        ret, otsu_thresh = cv2.threshold(diff_gray_blur, OTSU_LOW_THRESH, OTSU_HIGH_THRESH,
+                                         cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         self._preview_image('otsu threshold', otsu_thresh, debug=debug)
 
         if ret < OTSU_SENSITIVITY:
@@ -83,12 +81,14 @@ class PatternRecognition:
 
             # discard noise with measure if area not within area thresholds
             if MIN_AREA < contour_area < MAX_AREA:
-                # discard if at the edge
-                if not edge_noise:
-                    valid_ids.append(i)
+                # discard as noise on aspect ratio
+                if MIN_ASPECT_RATIO < aspect_ratio < MAX_ASPECT_RATIO:
+                    # discard if at the edge
+                    if not edge_noise:
+                        valid_ids.append(i)
         return valid_ids
 
-    def _detect_patterns(self, im, bg, external_contours = True, debug=False):
+    def _detect_patterns(self, im, bg, external_contours=True, debug=False):
         # compute image difference
         diff = self._calc_difference_otsu(im, bg, debug=debug)
 
@@ -120,25 +120,31 @@ class PatternRecognition:
                 # get centroid
                 M = cv2.moments(contour)
                 cx = int(M['m10'] / M['m00'])
-                cy = int(M['m11'] / M['m00'])
+                cy = int(M['m01'] / M['m00'])
 
                 # draw bounding box
-                cv2.rectangle(im_out, (x, y), (x - w, y + h), (0, 255, 0), 1)
+                cv2.rectangle(im_out, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 # draw center
-                cv2.circle(im_out, (cx, cy), 3, (0, 255, 0), 1)
-                cv2.putText(im_out, "Point " + str(i), (x - w, y + h), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0),1)
-                cv2.putText(im_out, "cx,cy: " + str(self._truncate(cx, 2)) + "," + str(self._truncate(cy, 2)),(x - w, y + h + 9), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+                cv2.circle(im_out, (cx, cy), 2, (0, 255, 0), 2)
+                # draw the text
+                cv2.putText(im_out, f'Pt #{i}', (x - w, y + h + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                cv2.putText(im_out, f'{self._truncate(cx, 2)},{self._truncate(cy, 2)}', (x - w, y + h + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
                 points_detected.append([x, y, w, h, cx, cy])
         self._preview_image('pattern detected', im_out, debug=debug)
         return pattern_count, points_detected, im_out
 
     def run_detection(self, im, bg, debug=False):
-        pattern_count, contours, contour_ids = self._detect_patterns(im, bg, debug)
-        pattern_count, points_detected, im_out = self._output_patterns(im, pattern_count, contours, contour_ids, debug)
+        pattern_count, contours, contour_ids = self._detect_patterns(im, bg, debug=debug)
+        pattern_count, points_detected, im_out = self._output_patterns(im, pattern_count, contours, contour_ids, debug=debug)
         return pattern_count, points_detected, im_out
 
     def test_detection(self, im_path, bg_path, debug=True):
         im = cv2.imread(im_path)
         bg = cv2.imread(bg_path)
         self.run_detection(im, bg, debug)
+
+
+if __name__ == '__main__':
+    pr = SimplePatternDetector()
+    pr.test_detection('./fg.jpg', './bg.png')
