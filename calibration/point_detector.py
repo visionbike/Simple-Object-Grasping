@@ -8,26 +8,10 @@ __all__ = ['PointDetector']
 
 class PointDetector:
 
-    def __init__(self, camera_id, path_calib_info, path_env_info):
+    def __init__(self, camera_id, path_env_info):
         self.camera_id = camera_id
-        self.path_calib_info = Path(path_calib_info)
         self.path_env_info = Path(path_env_info)
         self.path_env_info.mkdir(parents=True, exist_ok=True)
-
-        # load calibration_info
-        self._load_calibration_info()
-
-    def _load_calibration_info(self):
-        print('>>> Loading Calibration Info...')
-        self.mat_cam = np.load(str(self.path_calib_info / 'camera_matrix.npy'))
-        self.dist_coeff = np.load(str(self.path_calib_info / 'distortion_coeff.npy'))
-        self.mat_cam_new = np.load(str(self.path_calib_info / 'camera_matrix_new.npy'))
-        self.roi = np.load(str(self.path_calib_info / 'roi.npy'))
-
-        self.cx = self.mat_cam_new[0, 2]
-        self.cy = self.mat_cam_new[1, 2]
-        self.fx = self.mat_cam_new[0, 0]
-        self.fy = self.mat_cam_new[1, 1]
 
     def capture_initial_image(self, mode='bg'):
         print(f">>>> Capturing {'background' if mode == 'bg' else 'Foreground'} Image...")
@@ -127,4 +111,5 @@ class PointDetector:
         for pt in points_detected:
             points.append(pt[-2:])
         points = np.array(points, dtype=np.float32)
+        print(f'Image points:\n{points}')
         np.save(str(self.path_env_info / 'image_coord.npy'), points)
