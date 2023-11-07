@@ -1,5 +1,3 @@
-import numpy as np
-import cv2
 from point_detector import *
 
 # define environment info path

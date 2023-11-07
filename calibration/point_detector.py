@@ -31,20 +31,16 @@ class PointDetector:
             if ret:
                 frame_viz = frame.copy()
                 frame_viz = cv2.putText(frame_viz, "Press X to capture image", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
-                frame_viz = cv2.putText(frame_viz, "Press Q to exit", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord('x'):
                     cv2.imwrite(str(self.path_env_info / fname), frame)
                     print('Saved frame!')
-                elif key == ord('q'):
-                    print('Exit!')
+                    cap.release()
+                    cv2.destroyAllWindows()
                     break
                 cv2.imshow(window_name, frame_viz)
             else:
                 break
-
-        cap.release()
-        cv2.destroyAllWindows()
 
     def detect_patterns(self):
         window_name = 'Points'
@@ -66,7 +62,7 @@ class PointDetector:
         # draw image center
         im_out = cv2.circle(im_out, im_center, 2, (0, 0, 255), 2)
         # draw the text
-        im_out = cv2.putText(im_out, 'O', (im_center[0], im_center[1] + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+        im_out = cv2.putText(im_out, 'C', (im_center[0], im_center[1] - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
         # visualize
         cv2.imshow(window_name, im_out)
@@ -89,11 +85,13 @@ class PointDetector:
                 frame_viz = frame.copy()
                 # draw center of patterns
                 for i, pt in enumerate(points_detected):
-                    frame_viz = cv2.circle(frame_viz, (pt[-2], pt[-1]), 2, (0, 255, 0), 2)
-                    frame_viz = cv2.putText(frame_viz, f'Pt {i}', (pt[-2], pt[-1] + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    frame_viz = cv2.circle(frame_viz, (pt[-2], pt[-1]), 2, (255, 0, 0), 2)
+                    frame_viz = cv2.putText(frame_viz, f'{i}', (pt[-2], pt[-1] + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
                 # draw image center
-                frame_viz = cv2.circle(frame_viz, (im_center[0], im_center[1]), 2, (0, 255, 0), 2)
-                frame_viz = cv2.putText(frame_viz, 'O', (im_center[0], im_center[1] + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,(0, 255, 0), 2)
+                frame_viz = cv2.circle(frame_viz, (im_center[0], im_center[1]), 2, (0, 0, 255), 2)
+                frame_viz = cv2.putText(frame_viz, 'C', (im_center[0], im_center[1] - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
+                frame_viz = cv2.putText(frame_viz, 'Press Q to close', (0, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord('q'):
                     print('Exit!')

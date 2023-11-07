@@ -5,7 +5,7 @@ __all__ = ['SimplePatternDetector']
 
 # define valid contour parameter limits in pixels
 # MANUALLY EDIT
-MIN_AREA = 10  # 10 x 10
+MIN_AREA = 100  # 10 x 10
 MAX_AREA = 10000  # 100 x 100
 
 # define aspect ratio width/height
@@ -130,7 +130,7 @@ class SimplePatternDetector:
                 # draw center of pattern
                 im_out = cv2.circle(im_out, (cx, cy), 2, (0, 255, 0), 2)
                 # draw the text
-                im_out = cv2.putText(im_out, f'Pt {i}', (x - w, y + h + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                im_out = cv2.putText(im_out, f'{i}', (x - w, y + h + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
                 # cv2.putText(im_out, f'{self._truncate(cx, 2)},{self._truncate(cy, 2)}', (x - w, y + h + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
                 points_detected.append([x, y, w, h, cx, cy])

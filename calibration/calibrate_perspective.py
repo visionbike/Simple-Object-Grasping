@@ -38,13 +38,6 @@ PATH_CALIB_INFO = Path('calibration_info')
 PATH_ENV_INFO = Path('environment_info')
 
 
-# define the camera center's real-world coordinate using the TM robot, value in mm
-# MANUALLY EDIT
-X_CAM_CENTER = 109
-Y_CAM_CENTER = 107
-Z_CAM_CENTER = 434
-
-
 # define the image center's real-world coordinates using the TM robot, value in mm
 # MANUALLY EDIT
 X_CENTER = 109
@@ -74,16 +67,6 @@ if __name__ == '__main__':
     print('>>>> Loading Image and Real-world Points...')
     WORLD_POINTS = np.array(WORLD_POINTS, dtype=np.float32)
     IMAGE_POINTS = np.load(str(PATH_ENV_INFO / 'image_coord.npy'))
-
-    # compute the real-world coordinate with camera center as the origin
-    WORLD_POINTS[0, 2] = Z_CAM_CENTER - WORLD_POINTS[0, 2]
-    for i in range(1, len(WORLD_POINTS)):
-        # start from 1, given for center Z = d* to the center
-        x_cam_world = WORLD_POINTS[i, 0] - X_CENTER
-        y_cam_world = WORLD_POINTS[i, 1] - Y_CENTER
-        d_cam_world = Z_CAM_CENTER - WORLD_POINTS[i, 2]
-        z_cam_world = np.sqrt(np.square(d_cam_world) + np.square(x_cam_world) + np.square(y_cam_world))
-        WORLD_POINTS[i, 2] = z_cam_world
 
     print('>>>> Solving PnP...')
     ret, rvec1, tvec1 = cv2.solvePnP(WORLD_POINTS, IMAGE_POINTS, calib_info.mat_cam_new, calib_info.dist_coeff)
