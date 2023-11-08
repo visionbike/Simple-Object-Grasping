@@ -1,16 +1,7 @@
 from pathlib import Path
 import numpy as np
 import cv2
-
-
-class CalibInfo:
-    mat_cam = None
-    mat_cam_new = None
-    mat_cam_new_inv = None
-    dist_coeff = None
-    roi = None
-    cx, cy = 0.0, 0.0
-    fx, fy = 0.0, 0.0
+from calibration.camera import CalibInfo
 
 
 def load_calibration_info(path_calib_info):
@@ -36,6 +27,15 @@ PATH_CALIB_INFO = Path('calibration_info')
 # define the image points path
 # MANUALLY EDIT
 PATH_ENV_INFO = Path('environment_info')
+
+
+# define the length (in mm) of the gripper + calibration tool via robot calibration (Z value)
+# MANUALLY EDIT
+LENGTH_GRIPPER_CALIB_TOOL = 258.4
+
+# define the length (in mm) of the calibration tool tail
+# MANUALLY EDIT
+LENGTH_CALIB_TOOL_TAIL = 30
 
 
 # define the image center's real-world coordinates using the TM robot, value in mm
@@ -68,6 +68,10 @@ if __name__ == '__main__':
     WORLD_POINTS = np.array(WORLD_POINTS, dtype=np.float32)
     IMAGE_POINTS = np.load(str(PATH_ENV_INFO / 'image_coord.npy'))
 
+    # re-compute the Z in WORLD_POINTS
+    # for pt in WORLD_POINTS:
+    #     pt[2] = pt[2] - LENGTH_GRIPPER_CALIB_TOOL
+
     print('>>>> Solving PnP...')
     ret, rvec1, tvec1 = cv2.solvePnP(WORLD_POINTS, IMAGE_POINTS, calib_info.mat_cam_new, calib_info.dist_coeff)
     # compute rotation matrix
@@ -82,7 +86,10 @@ if __name__ == '__main__':
     s_describe = np.array([0] * len(WORLD_POINTS), dtype=np.float32)
 
     for i in range(0, len(WORLD_POINTS)):
-        print(f'POINT #{i}')
+        if i == 0:
+            print(f'IMAGE CENTER')
+        else:
+            print(f'POINT #{i}')
 
         print("Forward: From World Points, Find Image Pixel...")
         XYZ1 = np.array(
@@ -118,6 +125,10 @@ if __name__ == '__main__':
         print(f'S: {s_describe[i]} Mean: {s_mean} Error: {s_describe[i] - s_mean}')
 
     print('>>>> Saving to file....')
+
+    np.save(str(PATH_CALIB_INFO / 'tvec1.npy'), tvec1)
+    np.save(str(PATH_CALIB_INFO / 'rvec1.npy'), rvec1)
+    np.save(str(PATH_CALIB_INFO / 'rotation_matrix.npy'), mat_R)
     np.save(str(PATH_CALIB_INFO / 'extrinsic_matrix.npy'), mat_Rt)
     np.save(str(PATH_CALIB_INFO / 'projection_matrix.npy'), mat_P)
     np.save(str(PATH_CALIB_INFO / 'scaling_factor.npy'), s_arr)

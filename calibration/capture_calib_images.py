@@ -29,7 +29,7 @@ if __name__ == '__main__':
                 cv2.imwrite(str(CALIB_IMG_DIR / f'cap_{i}.jpg'), frame)
                 print('>>>> Saved frame!')
             elif key == ord('q'):
-                print('>>> Exit')
+                print('>>>> Exit')
                 break
             cv2.imshow(window_name, frame_viz)
         else:
