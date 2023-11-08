@@ -1,7 +1,7 @@
 from pathlib import Path
 import numpy as np
 import cv2
-from calibration.camera import CalibInfo
+from camera import CalibInfo
 
 
 def load_calibration_info(path_calib_info):
@@ -12,10 +12,10 @@ def load_calibration_info(path_calib_info):
     cf.mat_cam_new_inv = np.load(str(path_calib_info / 'camera_matrix_new_inv.npy'))
     cf.roi = np.load(str(path_calib_info / 'roi.npy'))
 
-    cf.cx = CalibInfo.mat_cam_new[0, 2]
-    cf.cy = CalibInfo.mat_cam_new[1, 2]
-    cf.fx = CalibInfo.mat_cam_new[0, 0]
-    cf.fy = CalibInfo.mat_cam_new[1, 1]
+    cf.cx = cf.mat_cam_new[0, 2]
+    cf.cy = cf.mat_cam_new[1, 2]
+    cf.fx = cf.mat_cam_new[0, 0]
+    cf.fy = cf.mat_cam_new[1, 1]
 
     return cf
 
@@ -40,23 +40,23 @@ LENGTH_CALIB_TOOL_TAIL = 30
 
 # define the image center's real-world coordinates using the TM robot, value in mm
 # MANUALLY EDIT
-X_CENTER = 109
-Y_CENTER = 107
-Z_CENTER = 234
+X_CENTER = -392.96
+Y_CENTER = -342.43
+Z_CENTER = 125.88
 
 
 # define the pattern center's real-world coordinate using the TM robot, value in mm
 # MANUALLY EDIT
 WORLD_POINTS = [[X_CENTER, Y_CENTER, Z_CENTER],
-                [55, 39, 268],
-                [142, 39, 270],
-                [228, 39, 274],
-                [55, 106, 242],
-                [142, 106, 238],
-                [228, 106, 248],
-                [55, 173, 230],
-                [142, 173, 225],
-                [228, 173, 244]]
+                [-520.86, -348.87, 126.65],	# point 0
+                [-520.72, -444.50, 122.19],	# point 1
+                [-520.46, -253.99, 122.18],	# point 2
+                [-447.44, -348.77, 124.51],	# point 3
+                [-447.90, -253.99, 124.80],	# point 4	
+                [-447.21, -444.28, 124.57],	# point 5
+                [-373.77, -444.29, 126.90],	# point 6
+                [-374.78, -348.87, 126.10],	# point 7	
+                [-374.79, -253.02, 126.63]]	# point 8	
 
 IMAGE_POINTS = None
 
@@ -89,7 +89,7 @@ if __name__ == '__main__':
         if i == 0:
             print(f'IMAGE CENTER')
         else:
-            print(f'POINT #{i}')
+            print(f'POINT #{i-1}')
 
         print("Forward: From World Points, Find Image Pixel...")
         XYZ1 = np.array(
@@ -121,7 +121,10 @@ if __name__ == '__main__':
     print(f'Std: {s_std}')
     print(">>>>>> S Error by Point")
     for i in range(len(WORLD_POINTS)):
-        print(f'Point {i}')
+        if i == 0:
+            print(f'IMAGE CENTER')
+        else:
+            print(f'POINT #{i-1}')
         print(f'S: {s_describe[i]} Mean: {s_mean} Error: {s_describe[i] - s_mean}')
 
     print('>>>> Saving to file....')

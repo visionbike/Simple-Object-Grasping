@@ -5,7 +5,7 @@ __all__ = ['SimplePatternDetector']
 
 # define valid contour parameter limits in pixels
 # MANUALLY EDIT
-MIN_AREA = 100  # 10 x 10
+MIN_AREA = 200  # 10 x 10
 MAX_AREA = 10000  # 100 x 100
 
 # define aspect ratio width/height

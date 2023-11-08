@@ -40,10 +40,10 @@ class Camera:
         cf.mat_cam_new_inv = np.load(str(self.path_calib_info / 'camera_matrix_new_inv.npy'))
         cf.roi = np.load(str(self.path_calib_info / 'roi.npy'))
 
-        cf.cx = CalibInfo.mat_cam_new[0, 2]
-        cf.cy = CalibInfo.mat_cam_new[1, 2]
-        cf.fx = CalibInfo.mat_cam_new[0, 0]
-        cf.fy = CalibInfo.mat_cam_new[1, 1]
+        cf.cx = cf.mat_cam_new[0, 2]
+        cf.cy = cf.mat_cam_new[1, 2]
+        cf.fx = cf.mat_cam_new[0, 0]
+        cf.fy = cf.mat_cam_new[1, 1]
 
         return cf
 

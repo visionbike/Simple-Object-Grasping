@@ -85,8 +85,8 @@ class PointDetector:
                 frame_viz = frame.copy()
                 # draw center of patterns
                 for i, pt in enumerate(points_detected):
-                    frame_viz = cv2.circle(frame_viz, (pt[-2], pt[-1]), 2, (255, 0, 0), 2)
-                    frame_viz = cv2.putText(frame_viz, f'{i}', (pt[-2], pt[-1] + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                    frame_viz = cv2.circle(frame_viz, (pt[-2], pt[-1]), 2, (0, 255, 0), 2)
+                    frame_viz = cv2.putText(frame_viz, f'{i}', (pt[-2], pt[-1] + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 # draw image center
                 frame_viz = cv2.circle(frame_viz, (im_center[0], im_center[1]), 2, (0, 0, 255), 2)
                 frame_viz = cv2.putText(frame_viz, 'C', (im_center[0], im_center[1] - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
