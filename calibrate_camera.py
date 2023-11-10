@@ -2,8 +2,8 @@ from pathlib import Path
 import numpy as np
 import cv2
 
-CALIB_IMG_DIR = Path('calibration_images')
-CALIB_INFO_DIR = Path('calibration_info')
+CALIB_IMG_DIR = Path('./calibration_images')
+CALIB_INFO_DIR = Path('./calibration_info')
 CALIB_INFO_DIR.mkdir(parents=True, exist_ok=True)
 
 # define the size in mm in chessboard
@@ -23,11 +23,11 @@ obj_points = []     # 3d point in the real world space
 img_points = []     # 2d points in the image plane
 
 # define visualization window
-window_name = 'Verify'
-cv2.namedWindow(window_name, cv2.WINDOW_FULLSCREEN)
+window_name_im = 'Image'
+cv2.namedWindow(window_name_im, cv2.WINDOW_FULLSCREEN)
 
 # define alpha argument for getting optimal new camera matrix after calibration
-ALPHA = 1
+ALPHA = 0
 
 if __name__ == '__main__':
     print('>>>> Reading calibration images...')
@@ -45,19 +45,19 @@ if __name__ == '__main__':
             img_points.append(corners)
             # Draw and display the corners
             cv2.drawChessboardCorners(im, (7, 7), corners2, ret)
-            cv2.imshow(window_name, im)
+            cv2.imshow(window_name_im, im)
             cv2.waitKey(500)
     print(f'{found} images used for calibration')
     cv2.destroyAllWindows()
 
     print('>>>> Starting calibration...')
-    ret, mat_cam, dist, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, gray.shape[::-1], None, None)
+    ret, mat_cam, dist, rvec, tvec = cv2.calibrateCamera(obj_points, img_points, gray.shape[::-1], None, None)
 
     print('>>>> Verifying calibration...')
     # estimate re-projection error
     error_mean = 0.0
     for i in range(len(obj_points)):
-        img_points_, mat_jacob = cv2.projectPoints(obj_points[i], rvecs[i], tvecs[i], mat_cam, dist)
+        img_points_, mat_jacob = cv2.projectPoints(obj_points[i], rvec[i], tvec[i], mat_cam, dist)
         error_mean += cv2.norm(img_points[i], img_points_, cv2.NORM_L2) / len(img_points_)
     print(f'Re-projection error: {error_mean / len(obj_points)}')
 
@@ -67,15 +67,21 @@ if __name__ == '__main__':
     # This helps make the entire region of interest is the full dimensions of the image (after `undistort`)
     # if using Alpha = 1, we retain the black pixels, and obtain the region of interest as the valid pixels for the matrix.
     # I will use Alpha = 1, so that I don't have to run undistort and can just calculate my real world x,y
-    mat_newcam, roi = cv2.getOptimalNewCameraMatrix(mat_cam, dist, (w, h), ALPHA, (w, h))
+    mat_cam_new, roi = cv2.getOptimalNewCameraMatrix(mat_cam, dist, (w, h), ALPHA, (w, h))
+
     # get inverse new camera matrix
-    mat_newcam_inverse = np.linalg.inv(mat_newcam)
+    mat_cam_new_inv = np.linalg.inv(mat_cam)
 
     # undistort image
-    im_undist = cv2.undistort(im, mat_newcam, dist, None, mat_newcam)
+    im_undist = cv2.undistort(im, mat_cam, dist, None, mat_cam_new)
 
-    cv2.imshow('Before', im)
-    cv2.imshow('After', im_undist)
+    # visualization
+    window_name_before = 'Before'
+    cv2.namedWindow(window_name_before, cv2.WINDOW_FULLSCREEN)
+    window_name_after = 'After'
+    cv2.namedWindow(window_name_after, cv2.WINDOW_FULLSCREEN)
+    cv2.imshow(window_name_before, im)
+    cv2.imshow(window_name_after, im_undist)
     cv2.waitKey(5000)
     cv2.destroyAllWindows()
 
@@ -84,13 +90,3 @@ if __name__ == '__main__':
     np.save(CALIB_INFO_DIR / 'camera_matrix.npy', mat_cam)
     print(f'Distortion Coefficients:\n{dist}')
     np.save(CALIB_INFO_DIR / 'distortion_coeff.npy', dist)
-    print(f'Rotation vector:\n{rvecs}')
-    np.save(CALIB_INFO_DIR / 'camera_rvecs.npy', rvecs)
-    print(f'Translation vector:\n{dist}')
-    np.save(CALIB_INFO_DIR / 'camera_tvecs.npy', tvecs)
-    print(f'Region of Interest:\n{roi}')
-    np.save(CALIB_INFO_DIR / 'roi.npy', roi)
-    print(f'New camera matrix:\n{mat_newcam}')
-    np.save(CALIB_INFO_DIR / 'camera_matrix_new.npy', mat_newcam)
-    print(f'Inverse new camera matrix: {mat_newcam_inverse}')
-    np.save(CALIB_INFO_DIR / 'camera_matrix_new_inv.npy', mat_newcam_inverse)

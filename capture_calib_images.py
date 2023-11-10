@@ -1,11 +1,11 @@
 from pathlib import Path
 import cv2
 
-CALIB_IMG_DIR = Path('calibration_images')
+CALIB_IMG_DIR = Path('./calibration_images')
 CALIB_IMG_DIR.mkdir(parents=True, exist_ok=True)
 
 # define visualization window
-window_name = 'Capture'
+window_name = 'Capture Calibration Image'
 cv2.namedWindow(window_name, cv2.WINDOW_FULLSCREEN)
 
 
