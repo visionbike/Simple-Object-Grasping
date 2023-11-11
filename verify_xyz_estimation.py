@@ -54,12 +54,13 @@ def control_TM_arm(tm_robot: TMRobot, world_point_init: list, world_point_inter:
     if not rospy.is_shutdown():
         # move to initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(10)
+        rospy.sleep(10)     # unit: ms
+        # move to the intermediate position
         tm_robot.move(world_point_inter, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(10)
+        rospy.sleep(10)     # unit: ms
         # move to the end position
         tm_robot.move(world_point_end, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(25)
+        rospy.sleep(25)     # unit: ms
         # move back to the initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
 

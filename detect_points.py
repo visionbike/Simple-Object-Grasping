@@ -1,7 +1,7 @@
 from pathlib import Path
 import numpy as np
 import cv2
-from detector import ShapeDetector
+from detector import ContourDetector
 
 
 # define environment info path
@@ -106,11 +106,11 @@ class PointDetector:
         print('>>> Detecting Patterns...')
         fg = cv2.imread(str(self.path_env_info / 'fg.jpg'))
         bg = cv2.imread(str(self.path_env_info / 'bg.jpg'))
-        pr = ShapeDetector()
-        contours, self.centroids = pr.detect_shape(fg, bg,
-                                              OTSU_SENSITIVITY, OTSU_HIGH_THRESH, OTSU_SENSITIVITY,
-                                              MIN_ASPECT_RATIO, MAX_ASPECT_RATIO,
-                                              MIN_AREA, MAX_AREA)
+        pr = ContourDetector()
+        contours, self.centroids = pr.detect_contour(fg, bg,
+                                                     OTSU_SENSITIVITY, OTSU_HIGH_THRESH, OTSU_SENSITIVITY,
+                                                     MIN_ASPECT_RATIO, MAX_ASPECT_RATIO,
+                                                     MIN_AREA, MAX_AREA)
         print(f'{len(self.centroids)} patterns detected.')
         if len(self.centroids) == 0:
             return False
