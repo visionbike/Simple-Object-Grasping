@@ -145,29 +145,25 @@ def detect_contours(bg, fg, min_thresh, max_thresh, sensitivity, min_area, max_a
     # find the contours
     # use RETR_EXTERNAL for only outer contours
     # use RETR_TREE for all the hierarchy
-    contours_, hierarchy = cv2.findContours(diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # identify the valid contours
-    contour_ids = get_valid_contours(contours_, min_area, max_area)
+    contour_ids = get_valid_contours(contours, min_area, max_area)
 
-    # detect centroids, including:
-    # x, y: top left point of bounding box
-    # w, h: width, height of bounding box
+    # detect centroids, including
     # cx, cy: centroid point
+    # w, h: width, height of min area rectangle bounding box
     # angle: the angle to detect the direction
-    centroids_ = []
+    centroids = []
     for i, idx in enumerate(contour_ids):
-        contour = contours_[idx]
-
-        # get rectangle bounding box
-        x, y, w, h = cv2.boundingRect(contour)
+        contour = contours[idx]
 
         # get centroid and angle
         centroid, size, angle = cv2.minAreaRect(contour)
 
         # [x, y, w, h, cx, cy, angle]
-        centroids_.append([x, y, w, h, centroid[0], centroid[1], angle])
-    return contours_, centroids_
+        centroids.append([centroid, size, angle])
+    return contours, centroids
 ```
 
 The centroids and corresponding angle will then used to point out the 3D position and the orientation for TM robot arm to grasp objects.

@@ -1,1 +1,1 @@
-from shape_detector import *
+from .contour_detector import *

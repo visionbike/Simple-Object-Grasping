@@ -1,12 +1,12 @@
 import numpy as np
 import cv2
 
-__all__ = ['ShapeDetector']
+__all__ = ['ContourDetector']
 
 
-class ShapeDetector:
+class ContourDetector:
     """
-    Shape detector using the image difference method
+    Contour detector using the image difference method
     """
 
     def _truncate(self, val, decimals=0):
@@ -52,8 +52,7 @@ class ShapeDetector:
         self._preview_image('Pre-diff blured', diff_gray_blur, debug=debug)
 
         # find Otsu's threshold image
-        ret, otsu_thresh = cv2.threshold(diff_gray_blur, min_thresh, max_thresh,
-                                         cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        ret, otsu_thresh = cv2.threshold(diff_gray_blur, min_thresh, max_thresh, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         self._preview_image('otsu threshold', otsu_thresh, debug=debug)
 
         if ret < sensitivity:
@@ -110,14 +109,14 @@ class ShapeDetector:
                         valid_ids.append(i)
         return valid_ids
 
-    def detect_shape(self,
-                     im: np.array, bg: np.array,
-                     min_thresh: float = 45, max_thresh: float = 255,
-                     sensitivity: float = 22,
-                     min_ratio: float = 0.25, max_ratio: float = 5.0,
-                     min_area: float = 200, max_area: float = 900000,
-                     external_contour: bool = True,
-                     debug: bool = False):
+    def detect_contour(self,
+                       im: np.array, bg: np.array,
+                       min_thresh: float = 45, max_thresh: float = 255,
+                       sensitivity: float = 22,
+                       min_ratio: float = 0.25, max_ratio: float = 5.0,
+                       min_area: float = 200, max_area: float = 900000,
+                       external_contour: bool = True,
+                       debug: bool = False):
         """
         Detect valid contours with their centroids.
 
