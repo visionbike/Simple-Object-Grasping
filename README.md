@@ -206,7 +206,7 @@ def control_TM_arm(tm_robot: TMRobot, world_point_init: list, world_point_inter:
         # move to initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
         rospy.sleep(10)  # unit: ms
-        # open the griper
+        # open the gripper
         tm_robot.set_IO('endeffector', 0, state='LOW')
         rospy.sleep(10)  # unit: ms
         # move to the intermediate position
