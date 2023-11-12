@@ -15,23 +15,23 @@ PATH_ENV_INFO = './environment_info'
 
 # define the image center's real-world coordinates using the TM robot, value in mm
 # MANUALLY EDIT
-X_CENTER = -392.96
-Y_CENTER = -342.43
-Z_CENTER = 125.88
+X_CENTER = 406.38
+Y_CENTER = -283.65
+Z_CENTER = 125.07
 
 
 # define the pattern center's real-world coordinate using the TM robot, value in mm
 # MANUALLY EDIT
 WORLD_POINTS = [[X_CENTER, Y_CENTER, Z_CENTER],
-                [-520.86, -348.87, 126.65],	    # point 0
-                [-520.72, -444.50, 122.19],	    # point 1
-                [-520.46, -253.99, 122.18],	    # point 2
-                [-447.44, -348.77, 124.51],	    # point 3
-                [-447.90, -253.99, 124.80],	    # point 4
-                [-447.21, -444.28, 124.57],	    # point 5
-                [-373.77, -444.29, 126.90],	    # point 6
-                [-374.78, -348.87, 126.10],	    # point 7
-                [-374.79, -253.02, 126.63]]	    # point 8
+                [463.92, -451.73, 123.57],	# point 0
+                [378.83, -445.32, 122.63],	# point 1
+                [273.73, -438.91, 121.68],	# point 2
+                [468.61, -378.62, 121.32],	# point 3
+                [373.59, -372.37, 122.35],	# point 4	
+                [278.49, -365.91, 122.14],	# point 5
+                [473.65, -305.31, 122.37],	# point 6
+                [378.40, -299.21, 123.01],	# point 7	
+                [283.04, -292.95, 122.68]]	# point 8
 
 IMAGE_POINTS = None
 

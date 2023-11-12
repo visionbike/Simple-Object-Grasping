@@ -9,18 +9,18 @@ from camera import Camera
 
 # define working space world Z
 # MANUALLY EDIT
-Z_WORKING_SPACE = 128
+Z_WORKING_SPACE = 121
 
 # define the offset world Z
 # MANUALLY EDIT
-Z_OFFSET = 3
+Z_OFFSET = 2
 
 # define initial world point
 # MANUALLY EDIT
-WORLD_POINT_INIT = [-35.6, -421.65, 244.2, 180, 0, 90]
+WORLD_POINT_INIT = [415.81, -211.48, 204.43, -180, 0, 90]
 
 # define the end world point
-WORLD_POINT_END = [-35.6, -421.65, 128, 180, 0, 90]
+WORLD_POINT_END = [415.81, -211.48, 204.43, -180, 0, 90]
 
 # define global touching image point
 PX, PY = 0, 0
@@ -54,15 +54,16 @@ def control_TM_arm(tm_robot: TMRobot, world_point_init: list, world_point_inter:
     if not rospy.is_shutdown():
         # move to initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(10)     # unit: ms
+        rospy.sleep(5)     # unit: s
         # make the endeffector grasp the tcp
         tm_robot.set_IO('endeffector', 0, 'HIGH')
+        rospy.sleep(5)     # unit: s
         # move to the intermediate position
         tm_robot.move(world_point_inter, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(10)     # unit: ms
+        rospy.sleep(5)     # unit: s
         # move to the end position
         tm_robot.move(world_point_end, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(25)     # unit: ms
+        rospy.sleep(10)     # unit: s
         # move back to the initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
 
@@ -108,7 +109,7 @@ if __name__ == '__main__':
             frame = cv2.putText(frame, 'Press Q to exit', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
             if clicked:
                 frame = cv2.circle(frame, (PX, PY), 2, (0, 0, 255), 2)
-            
+            cv2.imshow(window_name, frame)
             key = cv2.waitKey(1) & 0xFF
             if key == ord('x'):
                 try:
@@ -125,14 +126,12 @@ if __name__ == '__main__':
                     WORLD_POINT_INTER[2] = WORLD_POINT_INIT[2]
                     print(f'WORLD_POINT_INTER: {WORLD_POINT_INTER}')
 
-                    control_TM_arm(world_point_init=WORLD_POINT_INIT, world_point_inter=WORLD_POINT_INTER, world_point_end=WORLD_POINT_END)
+                    control_TM_arm(tm_robot=tm_robot, world_point_init=WORLD_POINT_INIT, world_point_inter=WORLD_POINT_INTER, world_point_end=WORLD_POINT_END)
                 except rospy.ROSInteruptException:
                     pass
             elif key == ord('q'):
                 print('>>>> Exit')
-                break
-            # frame_viz = frame.copy()
-            cv2.imshow(window_name, frame)
+                break  
         else:
             break
         
