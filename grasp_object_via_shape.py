@@ -11,23 +11,23 @@ from camera import Camera
 # define working space world Z
 # MANUALLY EDIT
 # [X, Y, Z, RX, RY, RZ]
-Z_WORKING_SPACE = 128
+Z_WORKING_SPACE = 122
 
 # define the offset world Z
 # MANUALLY EDIT
-Z_OFFSET = 3
+Z_OFFSET = -20
 
 # define initial world point
 # MANUALLY EDIT
-WORLD_POINT_INIT = [-35.6, -421.65, 244.2, 180, 0, 90]
+WORLD_POINT_INIT = [415.81, -38.48, 204.43, -180, 0, 90]
 
 # define the end world point
 WORLD_POINT_END = [-35.6, -421.65, 128, 180, 0, 90]
 
 # define valid contour parameter limits in pixels
 # MANUALLY EDIT
-MIN_AREA = 200  # 10 x 10
-MAX_AREA = 10000  # 100 x 100
+MIN_AREA = 250  # 10 x 10
+MAX_AREA = 200000  # 100 x 100
 
 # define thresholds for Otsu method
 # MANUALLY EDIT
@@ -64,21 +64,24 @@ def control_TM_arm(tm_robot: TMRobot, world_point_init: list, world_point_inter:
     if not rospy.is_shutdown():
         # move to initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(10)  # unit: ms
+        rospy.sleep(3)  # unit: s
         # open the gripper
         tm_robot.set_IO('endeffector', 0, state='LOW')
-        rospy.sleep(10)  # unit: ms
+        rospy.sleep(3)  # unit: s
         # move to the intermediate position
         tm_robot.move(world_point_inter, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(10)  # unit: ms
+        rospy.sleep(3)  # unit: s
         # move to the end position
         tm_robot.move(world_point_end, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(10)  # unit: ms
+        rospy.sleep(3)  # unit: s
         # close the gripper
         tm_robot.set_IO('endeffector', 0, state='HIGH')
-        rospy.sleep(10)  # unit: ms
+        rospy.sleep(1)  # unit: s
         # move back to the initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
+        rospy.sleep(3)  # unit: s
+        # close the gripper
+        tm_robot.set_IO('endeffector', 0, state='LOW')
 
 
 def click_event(event, x, y, flags, params):
@@ -91,7 +94,7 @@ def click_event(event, x, y, flags, params):
     :param flags: the flags.
     :param params: the other parameters.
     """
-
+    global ROI_CORNERS
     if event == cv2.EVENT_LBUTTONDOWN:
         if len(ROI_CORNERS) < 3:
             ROI_CORNERS.append([int(x), int(y)])
@@ -106,7 +109,7 @@ def compute_distance(pt1: Union[list, np.array], pt2: Union[list, np.array]):
     :return: the length of two points.
     """
 
-    return ((pt2[0] - pt1[0]) ** 2 + (pt2[1] - pt1[1]) ** 2) ** 0.5
+    return int(((pt2[0] - pt1[0]) ** 2 + (pt2[1] - pt1[1]) ** 2) ** 0.5)
 
 
 def compute_image_difference(bg, fg, min_thresh, max_thresh, sensitivity):
@@ -191,18 +194,23 @@ def detect_contours(bg, fg, min_thresh, max_thresh, sensitivity, min_area, max_a
     contour_ids = get_valid_contours(contours, min_area, max_area)
 
     # detect centroids, including
-    # cx, cy: centroid point
-    # w, h: width, height of min area rectangle bounding box
+    # (cx, cy): centroid point
+    # (w, h): width, height of min area rectangle bounding box
     # angle: the angle to detect the direction
     centroids = []
     for i, idx in enumerate(contour_ids):
         contour = contours[idx]
 
-        # get centroid and angle
+        # get centroid and angle of minimum area rectangle
         centroid, size, angle = cv2.minAreaRect(contour)
 
-        # [x, y, w, h, cx, cy, angle]
-        centroids.append([centroid, size, angle])
+        # estimate centroid of contours
+        M = cv2.moments(contour)
+        cx = int(M['m10'] / M['m00'])
+        cy = int(M['m01'] / M['m00'])
+
+        # [(cx, cy), (w, h), angle]
+        centroids.append([[cx, cy], list(size), angle])
     return contours, centroids
 
 
@@ -232,26 +240,39 @@ if __name__ == '__main__':
     while True:
         if ret:
             frame_viz = cv2.putText(frame_viz, '1. Select 3 corners of ROI', (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
-            frame_viz = cv2.putText(frame_viz, '2. Put object inside the ROI', (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
-            frame_viz = cv2.putText(frame_viz, '3. Press D to detection object', (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
-            frame_viz = cv2.putText(frame_viz, '3. Press X to grasp object', (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
-            frame_viz = cv2.putText(frame_viz, 'Press Q to exit', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
-
-            if len(ROI_CORNERS) == 3 and roi_bg is None:
+            frame_viz = cv2.putText(frame_viz, '2. Put object inside the ROI', (10, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
+            frame_viz = cv2.putText(frame_viz, '3. Press D to detection object', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
+            frame_viz = cv2.putText(frame_viz, '3. Press X to grasp object', (10, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
+            frame_viz = cv2.putText(frame_viz, 'Press Q to exit', (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
+            if 0 < len(ROI_CORNERS) < 3:
+                # draw point
+                for rc in ROI_CORNERS:
+                    frame_viz = cv2.circle(frame_viz, rc, 2, (36, 12, 255), 2)
+            elif len(ROI_CORNERS) == 3 and roi_bg is None:
                 # align the ROI to rectangle ROI
                 ROI_CORNERS[1][1] = ROI_CORNERS[0][1]
                 ROI_CORNERS[2][0] = ROI_CORNERS[0][0]
                 # compute ROI's width and height
                 rw = compute_distance(ROI_CORNERS[1], ROI_CORNERS[0])
-                rh = compute_distance(ROI_CORNERS[3], ROI_CORNERS[0])
+                rh = compute_distance(ROI_CORNERS[2], ROI_CORNERS[0])
                 # get ROI's background
                 roi_bg = frame[ROI_CORNERS[0][1]: ROI_CORNERS[0][1] + rh, ROI_CORNERS[0][0]: ROI_CORNERS[0][0] + rw, :]
             if roi_bg is not None:
                 # draw ROI
+                frame_viz = cv2.putText(frame_viz, 'ROI', (ROI_CORNERS[0][0], ROI_CORNERS[0][1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
                 frame_viz = cv2.rectangle(frame_viz,
                                           ROI_CORNERS[0], (ROI_CORNERS[0][0] + rw, ROI_CORNERS[0][1] + rh),
                                           (36, 12, 255), 2)
-            cv2.imshow(window_name, frame)
+            if len(centroids) > 0:
+                # visualize the contours
+                for i, c in enumerate(centroids):
+                    points = np.intp(cv2.boxPoints(c))
+                    frame_viz = cv2.putText(frame_viz, f'#{i}', (c[0][0],c[0][1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
+                    frame_viz = cv2.drawContours(frame_viz, [points], 0, (255, 0, 0), 2)
+                    frame_viz = cv2.circle(frame_viz, (int(c[0][0]), int(c[0][1])), 1, (0, 255, 0), 2)
+            else:
+                print('No object found!')
+            cv2.imshow(window_name, frame_viz)
             key = cv2.waitKey(1) & 0xFF
             if key == ord('d'):
                 print('>>>> Detect objects...')
@@ -259,20 +280,16 @@ if __name__ == '__main__':
                 roi_fg = frame[ROI_CORNERS[0][1]: ROI_CORNERS[0][1] + rh, ROI_CORNERS[0][0]: ROI_CORNERS[0][0] + rw, :]
                 # detect valid contours and their centroids
                 contours, centroids = detect_contours(roi_bg, roi_fg, OTSU_LOW_THRESH, OTSU_HIGH_THRESH, OTSU_SENSITIVITY, MIN_AREA, MAX_AREA)
-                if len(centroids) > 0:
-                    # visualize the contours
-                    for i, c in enumerate(centroids):
-                        points = box = np.intp(cv2.boxPoints(c))
-                        frame_viz = cv2.drawContours(frame_viz, [points], 0, (255, 0, 0), 1)
-                        frame_viz = cv2.circle(frame_viz, (c[4], c[5]), 1, (255, 0, 0), 1)
-                else:
-                    print('No object found!')
+                # remap the centroids from ROI to full image
+                for i in range(len(centroids)):
+                    centroids[i][0][0] += ROI_CORNERS[0][0]
+                    centroids[i][0][1] += ROI_CORNERS[0][1]
             elif key == ord('x'):
                 if len(centroids) > 0:
                     for i, c in enumerate(centroids):
                         try:
                             print('>>>> Robot Arm Control...')
-                            XYZ_ = camera.compute_XYZ(c[0], c[1])
+                            XYZ_ = camera.compute_XYZ(c[0][0], c[0][1])
                             XYZ_ = np.squeeze(XYZ_, axis=1).tolist()
                             print(f'XYZ_: {XYZ_}')
 
@@ -280,24 +297,27 @@ if __name__ == '__main__':
                             # set Z for grasping
                             WORLD_POINT_END[2] = Z_WORKING_SPACE + Z_OFFSET
                             # set RZ for end-effector rotation
-                            # MANUALLY EDIT
-                            if c[2] < c[3]:
+                            print(c[-1], c[1])
+                            if c[1][0] < c[1][1]:
+                                # if width < height
                                 angle = 90 - c[-1]
                             else:
                                 angle = -c[-1]
-                            WORLD_POINT_END[-1] = angle
+                            print(angle)
+                            WORLD_POINT_END[-1] = WORLD_POINT_END[-1] + angle
                             print(f'WORLD_POINT_END: {WORLD_POINT_END}')
 
                             WORLD_POINT_INTER = WORLD_POINT_END.copy()
                             WORLD_POINT_INTER[2] = WORLD_POINT_INIT[2]
                             print(f'WORLD_POINT_INTER: {WORLD_POINT_INTER}')
 
-                            control_TM_arm(world_point_init=WORLD_POINT_INIT, world_point_inter=WORLD_POINT_INTER, world_point_end=WORLD_POINT_END)
+                            control_TM_arm(tm_robot=tm_robot, world_point_init=WORLD_POINT_INIT, world_point_inter=WORLD_POINT_INTER, world_point_end=WORLD_POINT_END)
                         except rospy.ROSInteruptException:
                             break
+                    # reset centroids list
+                    centroids.clear()
             elif key == ord('q'):
                 print('>>>> Exit')
                 break
-
         ret, frame = cap.read()
         frame_viz = frame.copy()

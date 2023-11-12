@@ -151,8 +151,8 @@ def detect_contours(bg, fg, min_thresh, max_thresh, sensitivity, min_area, max_a
     contour_ids = get_valid_contours(contours, min_area, max_area)
 
     # detect centroids, including
-    # cx, cy: centroid point
-    # w, h: width, height of min area rectangle bounding box
+    # (cx, cy): centroid point
+    # (w, h): width, height of min area rectangle bounding box
     # angle: the angle to detect the direction
     centroids = []
     for i, idx in enumerate(contour_ids):
@@ -161,8 +161,13 @@ def detect_contours(bg, fg, min_thresh, max_thresh, sensitivity, min_area, max_a
         # get centroid and angle
         centroid, size, angle = cv2.minAreaRect(contour)
 
-        # [x, y, w, h, cx, cy, angle]
-        centroids.append([centroid, size, angle])
+        # estimate centroid of contours
+        M = cv2.moments(contour)
+        cx = int(M['m10'] / M['m00'])
+        cy = int(M['m01'] / M['m00'])
+
+        # [(cx, cy), (w, h), angle]
+        centroids.append([[cx, cy], list(size), angle])
     return contours, centroids
 ```
 
@@ -186,8 +191,9 @@ space surface's, leading the robot's termination. The offset can be adjusted bas
 Z_WORKING_SPACE = 128
 
 # define the offset world Z in mm
+# the length of the tcp point
 # MANUALLY EDIT
-Z_OFFSET = 3
+Z_OFFSET = -23
 ```
 
 The function to define the TM robot arm's movement will defined in `control_TM_arm()` function.
@@ -202,22 +208,25 @@ def control_TM_arm(tm_robot: TMRobot, world_point_init: list, world_point_inter:
     :param world_point_inter: the intermediate world point.
     :param world_point_end: the end world point.
     """
-        if not rospy.is_shutdown():
+    if not rospy.is_shutdown():
         # move to initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(10)  # unit: ms
+        rospy.sleep(3)  # unit: s
         # open the gripper
         tm_robot.set_IO('endeffector', 0, state='LOW')
-        rospy.sleep(10)  # unit: ms
+        rospy.sleep(3)  # unit: s
         # move to the intermediate position
         tm_robot.move(world_point_inter, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(10)  # unit: ms
+        rospy.sleep(3)  # unit: s
         # move to the end position
         tm_robot.move(world_point_end, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(10)  # unit: ms
+        rospy.sleep(3)  # unit: s
         # close the gripper
         tm_robot.set_IO('endeffector', 0, state='HIGH')
-        rospy.sleep(10)  # unit: ms
+        rospy.sleep(1)  # unit: s
         # move back to the initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
+        rospy.sleep(3)  # unit: s
+        # close the gripper
+        tm_robot.set_IO('endeffector', 0, state='LOW')
 ```
