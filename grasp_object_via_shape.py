@@ -10,7 +10,6 @@ from camera import Camera
 
 # define working space world Z
 # MANUALLY EDIT
-# [X, Y, Z, RX, RY, RZ]
 Z_WORKING_SPACE = 122
 
 # define the offset world Z
@@ -18,6 +17,7 @@ Z_WORKING_SPACE = 122
 Z_OFFSET = -20
 
 # define initial world point
+# [X, Y, Z, RX, RY, RZ]
 # MANUALLY EDIT
 WORLD_POINT_INIT = [415.81, -38.48, 204.43, -180, 0, 90]
 
@@ -139,7 +139,7 @@ def compute_image_difference(bg, fg, min_thresh, max_thresh, sensitivity):
     ret_, otsu_thresh = cv2.threshold(diff_gray_blur, min_thresh, max_thresh, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     # ret_ is considered as the threshold value
-    # if ret is small, it means the there small different between bg and fg images
+    # if ret_ is small, it means the there small different between bg and fg images
     if ret_ < sensitivity:
         # discard image
         # make the difference zero by subtracting backgrounds
