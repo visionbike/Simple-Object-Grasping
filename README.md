@@ -41,8 +41,8 @@ given a set of 3D points in the world and their corresponding 2D projections in 
 
 To get 2D points im the image, run `detect_points.py`. We apply the image difference between the background image working space 
 and the image that identify 9 circle patterns. The method simply detect the external contours of the 9 circle patterns then extract 
-the corresponding centroids. You can **adjust** `MIN_AREA`, `MAX_AREA`, `MIN_RATIO`, `MAX_RATION` values to eliminate the detected 
-corner points and non-defined circle patterns.
+the corresponding centroids. You can **adjust** `MIN_AREA`, `MAX_AREA`, `MIN_ASPECT_RATIO`, `MAX_ASPECT_RATIO` values to eliminate 
+the detected corner points and non-defined circle patterns.
 
 ```shell
 python3 detect_points.py
@@ -108,7 +108,8 @@ def compute_image_difference(bg, fg, min_thresh, max_thresh, sensitivity):
 The objects will be highlighted in the resulted image. The Gaussian blur is applied to removed possible noise (small regions), which
 would affect the detection result.
 
-The object's is detected by the finding external contour. The contour candidates will be filtered by the contour's area. This helps to remove unexpected contour or possible corners. Please adjust the `MIN_AREA`. `MAX_AREA`, `MIN_ASPECT_RATIO` and `MAX_ASPECT_RATIO`
+The object's is detected by the finding external contour. The contour candidates will be filtered by the contour's area. This helps to 
+remove unexpected contour or possible corners. Please adjust the `MIN_AREA`. `MAX_AREA`, `OTSU_SENSITIVITY`, `OTSU_LOW_THRESH` and `OTSU_HIGH_THRESH`
 based on your objects.
 
 ```python
@@ -171,7 +172,7 @@ def detect_contours(bg, fg, min_thresh, max_thresh, sensitivity, min_area, max_a
     return contours, centroids
 ```
 
-The centroids and corresponding angle will then used to point out the 3D position and the orientation for TM robot arm to grasp objects.
+The centroids and corresponding angle will then are used to point out the 3D position and the orientation for TM robot arm to grasp objects.
 The `TMRobot` class, which is defined in `./robot_control/tm_robot.py`, uses the API provide by TM Driver to control robot.
 You need to define `WORLD_POINT_INIT` value to specify the starting position that the robot is ready to do the grasping task.
 
@@ -196,7 +197,7 @@ Z_WORKING_SPACE = 128
 Z_OFFSET = -23
 ```
 
-The function to define the TM robot arm's movement will defined in `control_TM_arm()` function.
+The function to define the TM robot arm's movement will be defined in `control_TM_arm()` function.
 
 ```python
 def control_TM_arm(tm_robot: TMRobot, world_point_init: list, world_point_inter: list, world_point_end: list):
