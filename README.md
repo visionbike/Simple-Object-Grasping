@@ -74,7 +74,7 @@ python3 verify_xyz_estimation.py
 
 For more precise 3D coordinate estimation, retry the calibration process many times to save the best result.
 
-## Object Grasping Via Object Shape
+## Object Grasping Via Object Contour
 
 The method using the image difference method between the background Region of Interest (ROI) - **bg** image and the ROI that contains objects - 
 **fg** image. The **bg** and **fg** images are converted into gray-scale images, then the different image is computed by subtracting these images.
@@ -160,7 +160,7 @@ def detect_contours(bg, fg, min_thresh, max_thresh, sensitivity, min_area, max_a
         contour = contours[idx]
 
         # get centroid and angle
-        centroid, size, angle = cv2.minAreaRect(contour)
+        center, size, angle = cv2.minAreaRect(contour)
 
         # estimate centroid of contours
         M = cv2.moments(contour)
@@ -230,4 +230,98 @@ def control_TM_arm(tm_robot: TMRobot, world_point_init: list, world_point_inter:
         rospy.sleep(3)  # unit: s
         # close the gripper
         tm_robot.set_IO('endeffector', 0, state='LOW')
+```
+
+## Object Detection using YOLO
+
+Deep learning-based models excel the object recognition. In this project, we use the YOLO object detection model the leverage this task.
+The code for preparing data and training model is stored in `training_yolo`. 
+
+At beginning, we need to collect training data, which contains the objects. Placed the data on the work space and run `capture_data.py` to
+capture images and store in `yolo_data/img` folder.
+
+```shell
+cd training_yolo
+python3 capture_data.py
+```
+
+Inside folder `yolo_data`, create `obj.names` file, which stores object names (label name). 
+
+```shell
+# inside obj.names, provide the object names
+battery
+box
+pend
+```
+
+We also create  `obj.data` which define the training information.
+
+```shell
+# inside obj.data, provide training data
+classes = 3
+train = train.txt
+valid = val.txt
+name = obj.names
+```
+
+To create `train.txt` and `val.txt`, run `gen_train_val.py`. The code will split the collected data 
+into training and validation sets.
+
+```shell
+python3 gen_train_val.py
+```
+
+To label the collected images, we use `Yolo_mark` - a Window & Linux GUI for making bounded boxes of objects for training YOLO model.
+
+Clone the `Yolo_mark` repository and build the source code.
+
+```shell
+git clone https://github.com/AlexeyAB/Yolo_mark.git
+cd Yolo_mark && cmake . && make
+chmod +x Yolo_mark
+```
+
+Then run the following command to start labeling images from `train.txt`.
+
+```shell
+./Yolo_mark ../data ../data/train.txt ../data/obj.names
+```
+
+Run similar command with `val.txt`.
+
+```shell
+./Yolo_mark ../data ../data/val.txt ../data/obj.names
+```
+
+After finishing the labeling task, the annotation files (*.txt) for each image will be stored in `data/img` folder.
+
+Now, we can train YOLO model with our custom dataset. In this project, we use the training pipeline for YOLOv5 provided
+by [Ultralytics](https://www.ultralytics.com/). You need upload `YOLOv5_Training.ipynb` file to [Google Colab](https://colab.research.google.com/). 
+You also need to create a `datasets` in your [Google Drive](https://drive.google.com). Upload the `data` folder and a configuration file `custom.yaml`
+to `datasets` folder on Google Drive. The content in `custom.yaml` describe the information to training YOLO model on Google Colab. An example of 
+`custom.yaml` could be as below:
+
+```yaml
+# Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
+path: /content/drive/MyDrive/datasets/data  # dataset root dir
+train: img                                  # train images (relative to 'path')
+val: img                                    # val images (relative to 'path')
+test:  # test images (optional)
+
+# Classes
+nc: 3  # number of classes
+
+# class index and class names, should be the same as the index in the offline labeling task
+names: 
+  0: 'battery'
+  1: 'pen'
+  2: 'box'
+```
+
+Train `YOLOv5_Training.ipynb` on Google Colab and download best model `best.onnx` for the object detection usage.
+
+For using YOLO object detection model, make sure store `best.onnx` in `./Simple-Object-Grasping/models`. Then run `grasp_object_via_yolo.py`.
+
+```shell
+python3 grasp_object_via_yolo.py
 ```

@@ -7,7 +7,6 @@ from tm_msgs.msg import *
 from tm_msgs.srv import *
 from camera import Camera
 
-
 # define working space world Z
 # MANUALLY EDIT
 Z_WORKING_SPACE = 122
@@ -201,16 +200,30 @@ def detect_contours(bg, fg, min_thresh, max_thresh, sensitivity, min_area, max_a
     for i, idx in enumerate(contour_ids):
         contour = contours[idx]
 
-        # get centroid and angle of minimum area rectangle
-        centroid, size, angle = cv2.minAreaRect(contour)
+        # get center and angle of minimum area rectangle
+        center, size, angle = cv2.minAreaRect(contour)
 
         # estimate centroid of contours
         M = cv2.moments(contour)
         cx = int(M['m10'] / M['m00'])
         cy = int(M['m01'] / M['m00'])
 
-        # [(cx, cy), (w, h), angle]
-        centroids.append([[cx, cy], list(size), angle])
+        # determine the shape of contour
+        approx = cv2.approxPolyDP(contour, 0.01 * cv2.arcLength(contour, True), True)
+        if len(approx) == 3:
+            name = 'triangle'
+        elif len(approx) == 4:
+            name = 'rectangle'
+        elif 4 < len(approx) <= 15:
+            name = 'half-circle'
+        elif len(approx) > 15:
+            name = 'circle'
+        else:
+            name = ''
+
+            # [(cx, cy), (w, h), angle]
+            centroids.append([[cx, cy], list(size), angle, name])
+
     return contours, centroids
 
 
@@ -260,14 +273,12 @@ if __name__ == '__main__':
             if roi_bg is not None:
                 # draw ROI
                 frame_viz = cv2.putText(frame_viz, 'ROI', (ROI_CORNERS[0][0], ROI_CORNERS[0][1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
-                frame_viz = cv2.rectangle(frame_viz,
-                                          ROI_CORNERS[0], (ROI_CORNERS[0][0] + rw, ROI_CORNERS[0][1] + rh),
-                                          (36, 12, 255), 2)
+                frame_viz = cv2.rectangle(frame_viz, ROI_CORNERS[0], (ROI_CORNERS[0][0] + rw, ROI_CORNERS[0][1] + rh), (36, 12, 255), 2)
             if len(centroids) > 0:
                 # visualize the contours
                 for i, c in enumerate(centroids):
-                    points = np.intp(cv2.boxPoints(c))
-                    frame_viz = cv2.putText(frame_viz, f'#{i}', (c[0][0],c[0][1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
+                    points = np.intp(cv2.boxPoints(c[:-1]))
+                    frame_viz = cv2.putText(frame_viz, f'{c[-1]}', (c[0][0], c[0][1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 1)
                     frame_viz = cv2.drawContours(frame_viz, [points], 0, (255, 0, 0), 2)
                     frame_viz = cv2.circle(frame_viz, (int(c[0][0]), int(c[0][1])), 1, (0, 255, 0), 2)
             else:
@@ -279,7 +290,8 @@ if __name__ == '__main__':
                 # get the foreground image of ROI, make sure object is put inside ROI
                 roi_fg = frame[ROI_CORNERS[0][1]: ROI_CORNERS[0][1] + rh, ROI_CORNERS[0][0]: ROI_CORNERS[0][0] + rw, :]
                 # detect valid contours and their centroids
-                contours, centroids = detect_contours(roi_bg, roi_fg, OTSU_LOW_THRESH, OTSU_HIGH_THRESH, OTSU_SENSITIVITY, MIN_AREA, MAX_AREA)
+                contours, centroids = detect_contours(roi_bg, roi_fg, OTSU_LOW_THRESH, OTSU_HIGH_THRESH,
+                                                      OTSU_SENSITIVITY, MIN_AREA, MAX_AREA)
                 # remap the centroids from ROI to full image
                 for i in range(len(centroids)):
                     centroids[i][0][0] += ROI_CORNERS[0][0]
@@ -311,7 +323,8 @@ if __name__ == '__main__':
                             WORLD_POINT_INTER[2] = WORLD_POINT_INIT[2]
                             print(f'WORLD_POINT_INTER: {WORLD_POINT_INTER}')
 
-                            control_TM_arm(tm_robot=tm_robot, world_point_init=WORLD_POINT_INIT, world_point_inter=WORLD_POINT_INTER, world_point_end=WORLD_POINT_END)
+                            control_TM_arm(tm_robot=tm_robot, world_point_init=WORLD_POINT_INIT,
+                                           world_point_inter=WORLD_POINT_INTER, world_point_end=WORLD_POINT_END)
                         except rospy.ROSInteruptException:
                             break
                     # reset centroids list
