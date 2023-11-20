@@ -9,24 +9,24 @@ from camera import Camera
 
 # define working space world Z
 # MANUALLY EDIT
-Z_WORKING_SPACE = 122
+Z_WORKING_SPACE = 92.6
 
 # define the offset world Z
 # MANUALLY EDIT
-Z_OFFSET = -20
+Z_OFFSET = 2
 
 # define initial world point
 # [X, Y, Z, RX, RY, RZ]
 # MANUALLY EDIT
-WORLD_POINT_INIT = [415.81, -38.48, 204.43, -180, 0, 90]
+WORLD_POINT_INIT = [395, -16, 281, -180, 0, 90]
 
 # define the end world point
-WORLD_POINT_END = [-35.6, -421.65, 128, 180, 0, 90]
+WORLD_POINT_END = [395, -16, 281, -180, 0, 90]
 
 # define valid contour parameter limits in pixels
 # MANUALLY EDIT
-MIN_AREA = 250  # 10 x 10
-MAX_AREA = 200000  # 100 x 100
+MIN_AREA = 200  # 10 x 10
+MAX_AREA = 9000  # 100 x 100
 
 # define thresholds for Otsu method
 # MANUALLY EDIT
@@ -188,16 +188,18 @@ def detect_contours(bg, fg, min_thresh, max_thresh, sensitivity, min_area, max_a
     # use RETR_EXTERNAL for only outer contours
     # use RETR_TREE for all the hierarchy
     contours, hierarchy = cv2.findContours(diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    print(contours)
 
     # identify the valid contours
     contour_ids = get_valid_contours(contours, min_area, max_area)
+    print(contour_ids)
 
     # detect centroids, including
     # (cx, cy): centroid point
     # (w, h): width, height of min area rectangle bounding box
     # angle: the angle to detect the direction
     centroids = []
-    for i, idx in enumerate(contour_ids):
+    for idx in contour_ids:
         contour = contours[idx]
 
         # get center and angle of minimum area rectangle
@@ -221,8 +223,8 @@ def detect_contours(bg, fg, min_thresh, max_thresh, sensitivity, min_area, max_a
         else:
             name = ''
 
-            # [(cx, cy), (w, h), angle]
-            centroids.append([[cx, cy], list(size), angle, name])
+        # [(cx, cy), (w, h), angle]
+        centroids.append([[cx, cy], list(size), angle, name])
 
     return contours, centroids
 
@@ -278,11 +280,10 @@ if __name__ == '__main__':
                 # visualize the contours
                 for i, c in enumerate(centroids):
                     points = np.intp(cv2.boxPoints(c[:-1]))
-                    frame_viz = cv2.putText(frame_viz, f'{c[-1]}', (c[0][0], c[0][1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 1)
+                    frame_viz = cv2.putText(frame_viz, f'{c[-1]}', (c[0][0], c[0][1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
                     frame_viz = cv2.drawContours(frame_viz, [points], 0, (255, 0, 0), 2)
                     frame_viz = cv2.circle(frame_viz, (int(c[0][0]), int(c[0][1])), 1, (0, 255, 0), 2)
-            else:
-                print('No object found!')
+
             cv2.imshow(window_name, frame_viz)
             key = cv2.waitKey(1) & 0xFF
             if key == ord('d'):
@@ -309,12 +310,11 @@ if __name__ == '__main__':
                             # set Z for grasping
                             WORLD_POINT_END[2] = Z_WORKING_SPACE + Z_OFFSET
                             # set RZ for end-effector rotation
-                            print(c[-1], c[1])
                             if c[1][0] < c[1][1]:
                                 # if width < height
-                                angle = 90 - c[-1]
+                                angle = 90 - c[2]
                             else:
-                                angle = -c[-1]
+                                angle = -c[2]
                             print(angle)
                             WORLD_POINT_END[-1] = WORLD_POINT_END[-1] + angle
                             print(f'WORLD_POINT_END: {WORLD_POINT_END}')
