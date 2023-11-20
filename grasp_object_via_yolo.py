@@ -1,4 +1,5 @@
 from typing import Union
+import operator
 import cv2
 import numpy as np
 import rospy
@@ -35,13 +36,13 @@ THRESH_CLASS_CONF = 0.5
 
 # define valid contour parameter limits in pixels
 # MANUALLY EDIT
-MIN_AREA = 250  # 10 x 10
+MIN_AREA = 160  # 10 x 10
 MAX_AREA = 200000  # 100 x 100
 
 # define thresholds for Otsu method
 # MANUALLY EDIT
-OTSU_SENSITIVITY = 22
-OTSU_LOW_THRESH = 45
+OTSU_SENSITIVITY = 20
+OTSU_LOW_THRESH = 40
 OTSU_HIGH_THRESH = 255
 
 # define camera id
@@ -73,22 +74,25 @@ def control_TM_arm(tm_robot: TMRobot, world_point_init: list, world_point_inter:
     if not rospy.is_shutdown():
         # move to initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(3)  # unit: s
+        rospy.sleep(4)  # unit: s
         # open the gripper
         tm_robot.set_IO('endeffector', 0, state='LOW')
-        rospy.sleep(3)  # unit: s
+        rospy.sleep(4)  # unit: s
         # move to the intermediate position
         tm_robot.move(world_point_inter, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(3)  # unit: s
+        rospy.sleep(4)  # unit: s
         # move to the end position
         tm_robot.move(world_point_end, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(3)  # unit: s
+        rospy.sleep(4)  # unit: s
         # close the gripper
         tm_robot.set_IO('endeffector', 0, state='HIGH')
-        rospy.sleep(1)  # unit: s
+        rospy.sleep(4)  # unit: s
+        # move back to the initial position
+        tm_robot.move(world_point_inter, move_type='PTP_T', speed=2.5, blend_mode=False)
+        rospy.sleep(4)  # unit: s
         # move back to the initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(3)  # unit: s
+        rospy.sleep(4)  # unit: s
         # close the gripper
         tm_robot.set_IO('endeffector', 0, state='LOW')
 
@@ -137,9 +141,9 @@ def compute_image_difference(bg, fg, min_thresh, max_thresh, sensitivity):
     # convert to grayscale
     bg_gray = cv2.cvtColor(bg, cv2.COLOR_BGR2GRAY)
     fg_gray = cv2.cvtColor(fg, cv2.COLOR_BGR2GRAY)
-
+    
     # compute the difference of images
-    diff_gray = cv2.absdiff(bg_gray, fg_gray)
+    diff_gray = cv2.absdiff(bg_gray, fg_gray) 
 
     # blur the result to remove noise
     diff_gray_blur = cv2.GaussianBlur(diff_gray, (5, 5), 0)
@@ -182,8 +186,8 @@ def detect_contours(bg, fg, class_ids, box_confs, boxes, min_thresh, max_thresh,
     for i, box in enumerate(boxes):
         # compute image difference
         diff = compute_image_difference(
-            bg[box[0]: box[0] + box[2], box[1]: box[1] + box[3], :],
-            fg[box[0]: box[0] + box[2], box[1]: box[1] + box[3], :],
+            bg[box[1]: box[1] + box[3], box[0]: box[0] + box[2], :],
+            fg[box[1]: box[1] + box[3], box[0]: box[0] + box[2], :],
             min_thresh, max_thresh, sensitivity)
 
         # find the contours
@@ -206,13 +210,18 @@ def detect_contours(bg, fg, class_ids, box_confs, boxes, min_thresh, max_thresh,
 
             # estimate centroid of contours
             M = cv2.moments(contour)
-            cx = int(M['m10'] / M['m00'])
-            cy = int(M['m01'] / M['m00'])
+            cx = int(box[0] + M['m10'] / M['m00'])
+            cy = int(box[1] + M['m01'] / M['m00'])
 
             centroids.append([[cx, cy], list(size), angle])
             valid_ids.append(i)
-    if len(valid_ids) > 0:
-        return class_ids[valid_ids], box_confs[valid_ids], boxes[valid_ids], centroids
+    if len(valid_ids) > 1:
+        # list indice function
+        f = operator.itemgetter(*valid_ids)
+        class_ids = [class_ids[i] for i in valid_ids]
+        box_confs = [box_confs[i] for i in valid_ids]
+        boxes = [boxes[i] for i in valid_ids]
+        return class_ids, box_confs, boxes, centroids
     return class_ids, box_confs, boxes, centroids
 
 
@@ -241,6 +250,7 @@ if __name__ == '__main__':
     roi_bg = None
     rw, rh = 0, 0
     centroids = []
+    class_ids = []
     ret = False
     while True:
         if ret:
@@ -267,15 +277,15 @@ if __name__ == '__main__':
                 # draw ROI
                 frame_viz = cv2.putText(frame_viz, 'ROI', (ROI_CORNERS[0][0], ROI_CORNERS[0][1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
                 frame_viz = cv2.rectangle(frame_viz, ROI_CORNERS[0], (ROI_CORNERS[0][0] + rw, ROI_CORNERS[0][1] + rh), (36, 12, 255), 2)
+
             if len(centroids) > 0:
-                # visualize the contours
+                # visualize the centroids
                 for i, c in enumerate(centroids):
-                    points = np.intp(cv2.boxPoints(c[:-1]))
-                    frame_viz = cv2.putText(frame_viz, f'{c[-1]}', (c[0][0], c[0][1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 1)
+                    frame_viz = cv2.putText(frame_viz, f'{model_yolo.get_class_name(class_ids[i])}', (c[0][0], c[0][1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                    # frame_viz = cv2.rectangle(frame_viz, box[:2], (box[0] + box[2], box[1] + box[3]), (255, 12, 36), 2)
+                    points = np.intp(cv2.boxPoints(c))
                     frame_viz = cv2.drawContours(frame_viz, [points], 0, (255, 0, 0), 2)
-                    frame_viz = cv2.circle(frame_viz, (int(c[0][0]), int(c[0][1])), 1, (0, 255, 0), 2)
-            else:
-                print('No object found!')
+                    frame_viz = cv2.circle(frame_viz, (c[0][0], c[0][1]), 1, (0, 255, 0), 2)
 
             cv2.imshow(window_name, frame_viz)
 
@@ -286,12 +296,14 @@ if __name__ == '__main__':
                 roi_fg = frame[ROI_CORNERS[0][1]: ROI_CORNERS[0][1] + rh, ROI_CORNERS[0][0]: ROI_CORNERS[0][0] + rw, :]
                 # detect objects
                 class_ids, box_confs, boxes = model_yolo.detect_objects(roi_fg, min_box_conf_thresh=THRESH_BOX_CONF_MIN, max_box_conf_thresh=THRESH_BOX_CONF_MAX, class_conf_thresh=THRESH_CLASS_CONF)
+                
                 # detect centroids
                 class_ids, box_confs, boxes, centroids = detect_contours(roi_bg, roi_fg, class_ids, box_confs, boxes, OTSU_LOW_THRESH, OTSU_HIGH_THRESH, OTSU_SENSITIVITY, MIN_AREA, MAX_AREA)
+                
                 # remap the centroids from ROI to full image
                 for i in range(len(centroids)):
-                    centroids[i][0][0] += ROI_CORNERS[0][0] + boxes[i][0]
-                    centroids[i][0][1] += ROI_CORNERS[0][1] + boxes[i][1]
+                    centroids[i][0][0] += ROI_CORNERS[0][0]
+                    centroids[i][0][1] += ROI_CORNERS[0][1]
             elif key == ord('x'):
                 if len(centroids) > 0:
                     for i, c in enumerate(centroids):
@@ -305,12 +317,12 @@ if __name__ == '__main__':
                             # set Z for grasping
                             WORLD_POINT_END[2] = Z_WORKING_SPACE + Z_OFFSET
                             # set RZ for end-effector rotation
-                            print(c[-1], c[1])
+                            print(c[2], c[1])
                             if c[1][0] < c[1][1]:
                                 # if width < height
-                                angle = 90 - c[-1]
+                                angle = 90 - c[2]
                             else:
-                                angle = -c[-1]
+                                angle = -c[2]
                             print(angle)
                             WORLD_POINT_END[-1] = WORLD_POINT_END[-1] + angle
                             print(f'WORLD_POINT_END: {WORLD_POINT_END}')

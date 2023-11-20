@@ -1,4 +1,3 @@
-import pathlib
 import random
 from pathlib import Path
 
@@ -6,7 +5,9 @@ from pathlib import Path
 # MANUALLY EDIT
 RATIO = 0.25
 
-YOLO_DATA_DIR = Path('./data')
+# define the yolo data path
+# MANUALLY EDIT
+YOLO_DATA_DIR = Path('./yolo_data')
 YOLO_IMG_DIR = YOLO_DATA_DIR / 'img'
 
 if __name__ == '__main__':

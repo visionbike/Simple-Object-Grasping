@@ -75,7 +75,7 @@ def control_TM_arm(tm_robot: TMRobot, world_point_init: list, world_point_inter:
         rospy.sleep(3)  # unit: s
         # close the gripper
         tm_robot.set_IO('endeffector', 0, state='HIGH')
-        rospy.sleep(1)  # unit: s
+        rospy.sleep(3)  # unit: s
         # move back to the initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
         rospy.sleep(3)  # unit: s
@@ -277,12 +277,12 @@ if __name__ == '__main__':
                 frame_viz = cv2.putText(frame_viz, 'ROI', (ROI_CORNERS[0][0], ROI_CORNERS[0][1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
                 frame_viz = cv2.rectangle(frame_viz, ROI_CORNERS[0], (ROI_CORNERS[0][0] + rw, ROI_CORNERS[0][1] + rh), (36, 12, 255), 2)
             if len(centroids) > 0:
-                # visualize the contours
+                # visualize the centroids and the minimuym area rectangles
                 for i, c in enumerate(centroids):
                     points = np.intp(cv2.boxPoints(c[:-1]))
                     frame_viz = cv2.putText(frame_viz, f'{c[-1]}', (c[0][0], c[0][1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
                     frame_viz = cv2.drawContours(frame_viz, [points], 0, (255, 0, 0), 2)
-                    frame_viz = cv2.circle(frame_viz, (int(c[0][0]), int(c[0][1])), 1, (0, 255, 0), 2)
+                    frame_viz = cv2.circle(frame_viz, (c[0][0], c[0][1]), 1, (0, 255, 0), 2)
 
             cv2.imshow(window_name, frame_viz)
             key = cv2.waitKey(1) & 0xFF

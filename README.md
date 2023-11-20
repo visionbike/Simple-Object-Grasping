@@ -254,7 +254,7 @@ box
 pend
 ```
 
-We also create  `obj.data` which define the training information.
+We also create `obj.data` which define the training information.
 
 ```shell
 # inside obj.data, provide training data
@@ -264,11 +264,18 @@ valid = val.txt
 name = obj.names
 ```
 
-To create `train.txt` and `val.txt`, run `gen_train_val.py`. The code will split the collected data 
-into training and validation sets.
+To create `train.txt` and `val.txt`, run `gen_train_val.py`. The code will split the collected data into training and validation sets.
 
 ```shell
 python3 gen_train_val.py
+```
+
+You can adjust the ratio between the training and validation sets by `RATIO` variable in `gen_train_val.py`
+
+```python
+# the ratio of val set over whole dataset
+# MANUALLY EDIT
+RATIO = 0.25
 ```
 
 To label the collected images, we use `Yolo_mark` - a Window & Linux GUI for making bounded boxes of objects for training YOLO model.
@@ -278,32 +285,32 @@ Clone the `Yolo_mark` repository and build the source code.
 ```shell
 git clone https://github.com/AlexeyAB/Yolo_mark.git
 cd Yolo_mark && cmake . && make
-chmod +x Yolo_mark
+chmod +x yolo_mark
 ```
 
-Then run the following command to start labeling images from `train.txt`.
+In `Yolo_mark` folder, run the following command to start labeling images from `train.txt`.
 
 ```shell
-./Yolo_mark ../data ../data/train.txt ../data/obj.names
+./yolo_mark ../yolo_data ../yolo_data/train.txt ../yolo_data/obj.names
 ```
 
 Run similar command with `val.txt`.
 
 ```shell
-./Yolo_mark ../data ../data/val.txt ../data/obj.names
+./yolo_mark ../yolo_data ../yolo_data/train.txt ../yolo_data/obj.names
 ```
 
-After finishing the labeling task, the annotation files (*.txt) for each image will be stored in `data/img` folder.
+After finishing the labeling task, the annotation files (*.txt) for each image will be stored in `yolo_data/img` folder.
 
 Now, we can train YOLO model with our custom dataset. In this project, we use the training pipeline for YOLOv5 provided
 by [Ultralytics](https://www.ultralytics.com/). You need upload `YOLOv5_Training.ipynb` file to [Google Colab](https://colab.research.google.com/). 
-You also need to create a `datasets` in your [Google Drive](https://drive.google.com). Upload the `data` folder and a configuration file `custom.yaml`
+You also need to create a `datasets` in your [Google Drive](https://drive.google.com). Upload the `yolo_data` folder and a configuration file `custom.yaml`
 to `datasets` folder on Google Drive. The content in `custom.yaml` describe the information to training YOLO model on Google Colab. An example of 
 `custom.yaml` could be as below:
 
 ```yaml
 # Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
-path: /content/drive/MyDrive/datasets/data  # dataset root dir
+path: /content/drive/MyDrive/datasets/yolo_data  # dataset root dir
 train: img                                  # train images (relative to 'path')
 val: img                                    # val images (relative to 'path')
 test:  # test images (optional)

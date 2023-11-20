@@ -10,7 +10,7 @@ class YoloObjectDetector:
     Object Detector that using YOLO
     """
 
-    def __init__(self, model_path: str, use_cuda: bool = False):
+    def __init__(self, model_path: str, use_cuda: bool = False, img_width=640, img_height=480):
         """
 
         :param model_path: the path that stores YOLO model.
@@ -19,7 +19,7 @@ class YoloObjectDetector:
         self.model_path = Path(model_path)
         self._load_model(use_cuda)
         self._load_class_names()
-        self.IMG_WIDTH, self.IMG_HEIGHT = 0, 0
+        self.IMG_WIDTH, self.IMG_HEIGHT = img_width, img_height
 
     def _load_model(self, use_cuda: bool = False):
         """
@@ -43,6 +43,7 @@ class YoloObjectDetector:
         """
         with open(str(Path(self.model_path / 'obj.names')), 'r') as f:
             self.class_names = {i: name.strip() for i, name in enumerate(f.readlines())}
+            print(self.class_names)
 
     def format_yolo_input(self, img: np.array):
         """
@@ -51,11 +52,11 @@ class YoloObjectDetector:
         :param img: the input image.
         :return: the output image
         """
-
-        self.IMG_HEIGHT, self.IMG_WIDTH, _ = img.shape
+        
+        height, width, _ = img.shape
         size_max = max(self.IMG_WIDTH, self.IMG_HEIGHT)
         out = np.zeros((size_max, size_max, 3), np.uint8)
-        out[0: self.IMG_HEIGHT, 0: self.IMG_WIDTH] = img
+        out[0: img.shape[0], 0: img.shape[1], :] = img
         return out
 
     def detect_objects(self, img: np.array, min_box_conf_thresh: float = 0.25, max_box_conf_thresh: float = 0.5, class_conf_thresh: float = 0.5):
@@ -70,10 +71,8 @@ class YoloObjectDetector:
         """
 
         # format the input image into YOLO format
+        # the input of YOLO shoulde have shape of 640x640
         img = self.format_yolo_input(img)
-
-        ratio_x = img.shape[0] / self.IMG_WIDTH
-        ratio_y = img.shape[1] / self.IMG_HEIGHT
 
         # get predictions from YOLO
         blob = cv2.dnn.blobFromImage(img, 1.0 / 255.0, img.shape[:-1], swapRB=True, crop=False)
@@ -91,7 +90,7 @@ class YoloObjectDetector:
         # go through each detected object
         for output in outputs:
             for detection in output:
-                box_conf = detection[4:]        # get the box confidence value
+                box_conf = detection[4]        # get the box confidence value
                 # process the detected bounding box having confidence value larger than threshold,
                 # otherwise, discard it
                 if box_conf > min_box_conf_thresh:
@@ -101,10 +100,10 @@ class YoloObjectDetector:
                     # store the bounding box for the detected objects which have confidence values larger than the threshold
                     # discard the confidence values which are smaller the threshold value
                     if class_conf > class_conf_thresh:
-                        x = int((detection[0] - 0.5 * detection[2]) * ratio_x)
-                        y = int((detection[1] - 0.5 * detection[3]) * ratio_y)
-                        w = int(detection[2] * ratio_x)
-                        h = int(detection[3] * ratio_y)
+                        x = int(detection[0] - 0.5 * detection[2])
+                        y = int(detection[1] - 0.5 * detection[3])
+                        w = int(detection[2])
+                        h = int(detection[3])
                         box = np.array([x, y, w, h])
 
                         class_ids.append(class_id)
