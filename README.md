@@ -249,12 +249,12 @@ Inside folder `yolo_data`, create `obj.names` file, which stores object names (l
 
 ```shell
 # inside obj.names, provide the object names
-battery
-box
-pend
+rectangle
+circle
+half-circle
 ```
 
-We also create `obj.data` which define the training information.
+We also create `obj.data` which defines the training information.
 
 ```shell
 # inside obj.data, provide training data
@@ -270,7 +270,7 @@ To create `train.txt` and `val.txt`, run `gen_train_val.py`. The code will split
 python3 gen_train_val.py
 ```
 
-You can adjust the ratio between the training and validation sets by `RATIO` variable in `gen_train_val.py`
+You can adjust the ratio between the training and validation sets by changing `RATIO` value inside `gen_train_val.py`.
 
 ```python
 # the ratio of val set over whole dataset
@@ -279,7 +279,6 @@ RATIO = 0.25
 ```
 
 To label the collected images, we use `Yolo_mark` - a Window & Linux GUI for making bounded boxes of objects for training YOLO model.
-
 Clone the `Yolo_mark` repository and build the source code.
 
 ```shell
@@ -300,13 +299,36 @@ Run similar command with `val.txt`.
 ./yolo_mark ../yolo_data ../yolo_data/train.txt ../yolo_data/obj.names
 ```
 
-After finishing the labeling task, the annotation files (*.txt) for each image will be stored in `yolo_data/img` folder.
+You need to read `README` file first know how to use the `Yolo_mark` tool and make sure all images i After finishing the labeling task, 
+the annotation files (*.txt) for each image will be stored in `yolo_data/img` folder.
 
-Now, we can train YOLO model with our custom dataset. In this project, we use the training pipeline for YOLOv5 provided
-by [Ultralytics](https://www.ultralytics.com/). You need upload `YOLOv5_Training.ipynb` file to [Google Colab](https://colab.research.google.com/). 
-You also need to create a `datasets` in your [Google Drive](https://drive.google.com). Upload the `yolo_data` folder and a configuration file `custom.yaml`
-to `datasets` folder on Google Drive. The content in `custom.yaml` describe the information to training YOLO model on Google Colab. An example of 
-`custom.yaml` could be as below:
+For better model's performance, you can increase your collected data artificially. Running `augment_yolo.py`, you can easily augment the
+labeled training data in YOLO format.
+
+Supported augmentation types:
+- Horizontal Flip
+- Vertical Flip
+- Horizontal and Vertical Flip
+- Random Brightness
+
+The input parameters can be changed using the command line:
+
+```shell
+python3 augment_yolo.py -i <train_file> -t <augment_type (hflip, vflip, hvflip, bright, all)>
+```
+
+For running example:
+```shell
+# apply all augmentation types
+python3 augment_yolo.py -i ./yolo_data/train.txt -t all
+````
+
+The augmented image filename will automatically add into `./yolo_data/train.txt`
+
+Now, we can train YOLO model with our custom dataset. In this project, we use the training pipeline for YOLOv5 provided by [Ultralytics](https://www.ultralytics.com/). 
+
+Upload `YOLOv5_Training.ipynb` file to [Google Colab](https://colab.research.google.com/). You also need to create a `datasets` in your [Google Drive](https://drive.google.com) and upload the `yolo_data` folder 
+and a configuration file `custom.yaml` to `datasets` folder on Google Drive. The content in `custom.yaml` describe the information to training YOLO model on Google Colab. An example of `custom.yaml` could be as below:
 
 ```yaml
 # Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
@@ -320,12 +342,14 @@ nc: 3  # number of classes
 
 # class index and class names, should be the same as the index in the offline labeling task
 names: 
-  0: 'battery'
-  1: 'pen'
-  2: 'box'
+  0: 'rectangle'
+  1: 'circle'
+  2: 'half-circle'
 ```
 
-Train `YOLOv5_Training.ipynb` on Google Colab and download best model `best.onnx` for the object detection usage.
+Notice that the label name and index should be the same as the order defined in `obj.names`
+
+Train `YOLOv5_Training.ipynb` on Google Colab and download best model `best.onnx` in `run/train/exp/weights/` directory for the object detection usage.
 
 For using YOLO object detection model, make sure store `best.onnx` in `./Simple-Object-Grasping/models`. Then run `grasp_object_via_yolo.py`.
 

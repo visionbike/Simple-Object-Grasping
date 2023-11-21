@@ -12,7 +12,7 @@ YOLO_IMG_DIR = YOLO_DATA_DIR / 'img'
 
 if __name__ == '__main__':
     # get all filename in folder
-    name_list = [(fn.as_posix() + '\n') for fn in YOLO_IMG_DIR.glob('*.jpg')]
+    name_list = [(str(fn) + '\n') for fn in YOLO_IMG_DIR.glob('*.jpg')]
 
     # shuffle the name list
     random.shuffle(name_list)
