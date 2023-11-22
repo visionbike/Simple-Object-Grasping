@@ -58,7 +58,13 @@ ROI_CORNERS = []
 PATH_CALIB_INFO = 'calibration_info'
 
 
-def rospy_init_node(name):
+def rospy_init_node(name: str):
+    """
+    Initiate ROS node
+
+    :param name: node name
+    :return:
+    """
     rospy.init_node(name)
 
 
@@ -74,25 +80,25 @@ def control_TM_arm(tm_robot: TMRobot, world_point_init: list, world_point_inter:
     if not rospy.is_shutdown():
         # move to initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(4)  # unit: s
+        rospy.sleep(3)  # unit: s
         # open the gripper
         tm_robot.set_IO('endeffector', 0, state='LOW')
-        rospy.sleep(4)  # unit: s
+        rospy.sleep(3)  # unit: s
         # move to the intermediate position
         tm_robot.move(world_point_inter, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(4)  # unit: s
+        rospy.sleep(3)  # unit: s
         # move to the end position
         tm_robot.move(world_point_end, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(4)  # unit: s
+        rospy.sleep(3)  # unit: s
         # close the gripper
         tm_robot.set_IO('endeffector', 0, state='HIGH')
-        rospy.sleep(4)  # unit: s
-        # move back to the initial position
+        rospy.sleep(3)  # unit: s
+        # move back to the intermediate position
         tm_robot.move(world_point_inter, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(4)  # unit: s
+        rospy.sleep(3)  # unit: s
         # move back to the initial position
         tm_robot.move(world_point_init, move_type='PTP_T', speed=2.5, blend_mode=False)
-        rospy.sleep(4)  # unit: s
+        rospy.sleep(3)  # unit: s
         # close the gripper
         tm_robot.set_IO('endeffector', 0, state='LOW')
 
@@ -125,7 +131,7 @@ def compute_distance(pt1: Union[list, np.array], pt2: Union[list, np.array]):
     return int(((pt2[0] - pt1[0]) ** 2 + (pt2[1] - pt1[1]) ** 2) ** 0.5)
 
 
-def compute_image_difference(bg, fg, min_thresh, max_thresh, sensitivity):
+def compute_image_difference(bg: np.array, fg: np.array, min_thresh: int, max_thresh: int, sensitivity: int):
     """
     Compute the difference between background and foreground image using Otsu threshold method.
 
@@ -162,7 +168,7 @@ def compute_image_difference(bg, fg, min_thresh, max_thresh, sensitivity):
     return diff
 
 
-def get_valid_contours(contours, min_area, max_area):
+def get_valid_contours(contours: list, min_area: int, max_area: int):
     """
     Get the valid contours in a range of area value.
     :param contours: the input contours.
@@ -180,7 +186,23 @@ def get_valid_contours(contours, min_area, max_area):
     return valid_ids
 
 
-def detect_contours(bg, fg, class_ids, box_confs, boxes, min_thresh, max_thresh, sensitivity, min_area, max_area):
+def detect_contours(bg: np.array, fg: np.array, class_ids: list, box_confs: list, boxes: list, min_thresh: int, max_thresh: int, sensitivity: int, min_area: int, max_area: int):
+    """
+    Detect YOLO detected objects' centroids and grasping orientation.
+
+    :param bg: the input background.
+    :param fg: the input foreground.
+    :param class_ids: the class ids of detected objects.
+    :param box_confs: the bounding confidence values of detected objects.
+    :param boxes: the bounding boxes of detected objects.
+    :param min_thresh: the minimum OTSU's threshold.
+    :param max_thresh: the maximum OTSU's threshold.
+    :param sensitivity: the OTSU's threshold for detect the difference between `bg` and `fg`.
+    :param min_area: the minimum contour area threshold.
+    :param max_area: the maximum contour area threshold.
+    :return: (class_ids, box_confs, boxes, centroids)
+    """
+
     valid_ids = []
     centroids = []
     for i, box in enumerate(boxes):
@@ -216,8 +238,7 @@ def detect_contours(bg, fg, class_ids, box_confs, boxes, min_thresh, max_thresh,
             centroids.append([[cx, cy], list(size), angle])
             valid_ids.append(i)
     if len(valid_ids) > 1:
-        # list indice function
-        f = operator.itemgetter(*valid_ids)
+        # list indices function
         class_ids = [class_ids[i] for i in valid_ids]
         box_confs = [box_confs[i] for i in valid_ids]
         boxes = [boxes[i] for i in valid_ids]
