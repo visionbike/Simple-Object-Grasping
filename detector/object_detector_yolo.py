@@ -104,6 +104,8 @@ class YoloObjectDetector:
                         y = int(detection[1] - 0.5 * detection[3])
                         w = int(detection[2])
                         h = int(detection[3])
+                        x = 0 if x < 0 else x
+                        y = 0 if y < 0 else y
                         box = np.array([x, y, w, h])
 
                         class_ids.append(class_id)

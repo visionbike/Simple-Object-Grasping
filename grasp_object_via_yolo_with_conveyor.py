@@ -1,4 +1,5 @@
 from typing import Union
+import time
 import operator
 import cv2
 import numpy as np
@@ -24,7 +25,7 @@ Z_OFFSET = -20
 # define initial world point
 # [X, Y, Z, RX, RY, RZ]
 # MANUALLY EDIT
-WORLD_POINT_INIT = [415.81, -38.48, 204.43, -180, 0, 90]
+WORLD_POINT_INIT = [530.81, 102.63, 171.43, -180, 0, 90]
 
 # define the end world point
 WORLD_POINT_END = [-35.6, -421.65, 128, 180, 0, 90]
@@ -36,8 +37,8 @@ THRESH_CLASS_CONF = 0.5
 
 # define valid contour parameter limits in pixels
 # MANUALLY EDIT
-MIN_AREA = 160  # 10 x 10
-MAX_AREA = 200000  # 100 x 100
+MIN_AREA = 180  # 10 x 10
+MAX_AREA = 100000  # 100 x 100
 
 # define thresholds for Otsu method
 # MANUALLY EDIT
@@ -78,14 +79,14 @@ def control_TM_conveyor(tm_robot: TMRobot, pin: int, state: str = 'HIGH'):
 
     :param tm_robot: the TM robot object.
     :param pin: the PIN that connect the conveyor.
-    :param state: 'HIGH' to stop and 'LOW' to run the conveyor. Default: 'HIGH'.
+    :param state: 'HIGH' to start and 'LOW' to stop the conveyor. Default: 'HIGH'.
     :return:
     """
 
     if not rospy.is_shutdown():
         tm_robot.set_IO('controlbox', pin, state)
         rospy.sleep(3)
-    return True if state == 'LOW' else 'HIGH'
+    return True if state == 'HIGH' else False
 
 
 def control_TM_arm(tm_robot: TMRobot, world_point_init: list, world_point_inter: list, world_point_end: list):
@@ -112,7 +113,7 @@ def control_TM_arm(tm_robot: TMRobot, world_point_init: list, world_point_inter:
         rospy.sleep(3)  # unit: s
         # close the gripper
         tm_robot.set_IO('endeffector', 0, state='HIGH')
-        rospy.sleep(3)  # unit: s
+        rospy.sleep(10)  # unit: s
         # move back to the intermediate position
         tm_robot.move(world_point_inter, move_type='PTP_T', speed=2.5, blend_mode=False)
         rospy.sleep(3)  # unit: s
@@ -272,6 +273,9 @@ if __name__ == '__main__':
     # initiate TMRobot object
     tm_robot = TMRobot()
 
+    # stop conveyor first
+    control_TM_conveyor(tm_robot, 4, 'LOW')
+
     # initiate YOLO model
     model_yolo = YoloObjectDetector(MODEL_PATH, use_cuda=False)
 
@@ -285,21 +289,25 @@ if __name__ == '__main__':
 
     # open webcam
     cap = cv2.VideoCapture(CAMERA_ID)
+    cap.set(cv2.CAP_PROP_FPS, 5)
 
     # streaming
     frame_viz = None
     roi_bg = None
     rw, rh = 0, 0
     centroids = []
+    boxes = []
     class_ids = []
-    ret, ret_ = False, False
+    ret, ret_conveyor = False, False
     while True:
+
         if ret:
+            frame_viz = frame.copy()
             frame_viz = cv2.putText(frame_viz, '1. Select 3 corners of ROI', (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
-            frame_viz = cv2.putText(frame_viz, '2. Put object inside the ROI', (10, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
-            frame_viz = cv2.putText(frame_viz, '3. Press D to detection object', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
-            frame_viz = cv2.putText(frame_viz, '3. Press X to grasp object', (10, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
-            frame_viz = cv2.putText(frame_viz, 'Press Q to exit', (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
+            frame_viz = cv2.putText(frame_viz, '2. Put object outside the ROI', (10, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
+            frame_viz = cv2.putText(frame_viz, '3. Press X to start conveyor and detect', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
+            frame_viz = cv2.putText(frame_viz, 'Press Q to exit', (10, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
+
             if 0 < len(ROI_CORNERS) < 3:
                 # draw point
                 for rc in ROI_CORNERS:
@@ -318,8 +326,30 @@ if __name__ == '__main__':
                 # draw ROI
                 frame_viz = cv2.putText(frame_viz, 'ROI', (ROI_CORNERS[0][0], ROI_CORNERS[0][1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36, 12, 255), 2)
                 frame_viz = cv2.rectangle(frame_viz, ROI_CORNERS[0], (ROI_CORNERS[0][0] + rw, ROI_CORNERS[0][1] + rh), (36, 12, 255), 2)
+            
+            if ret_conveyor and len(centroids) == 0:
+                print('>>>> Detect objects...')
+                # get the foreground image of ROI, make sure object is put inside ROI
+                roi_fg = frame[ROI_CORNERS[0][1]: ROI_CORNERS[0][1] + rh, ROI_CORNERS[0][0]: ROI_CORNERS[0][0] + rw, :]
+                # detect objects
+                class_ids, box_confs, boxes = model_yolo.detect_objects(roi_fg, min_box_conf_thresh=THRESH_BOX_CONF_MIN, max_box_conf_thresh=THRESH_BOX_CONF_MAX, class_conf_thresh=THRESH_CLASS_CONF)
+                
+            if len(boxes) > 0: 
+                # rw is the width of ROI
+                # if the center point of the first detected object's bounding box reach over the rw / 2.5 line (near-center line)
+                # then stop the conveyor
+                if (boxes[0][0] + ROI_CORNERS[0][0] + boxes[0][2] // 2 >= ROI_CORNERS[0][0] + rw / 2.5):
+                    # stop conveyor
+                    ret_conveyor = control_TM_conveyor(tm_robot, 4, 'LOW')
 
-            if len(centroids) > 0:
+                    # detect centroids                    
+                    class_ids, box_confs, boxes, centroids = detect_contours(roi_bg, roi_fg, [class_ids[0]], [box_confs[0]], [boxes[0]], OTSU_LOW_THRESH, OTSU_HIGH_THRESH, OTSU_SENSITIVITY, MIN_AREA, MAX_AREA)
+
+                    # remap the centroids from ROI to full image
+                    for i in range(len(centroids)):
+                        centroids[i][0][0] += ROI_CORNERS[0][0]
+                        centroids[i][0][1] += ROI_CORNERS[0][1]
+
                 # visualize the centroids
                 for i, c in enumerate(centroids):
                     frame_viz = cv2.putText(frame_viz, f'{model_yolo.get_class_name(class_ids[i])}', (c[0][0], c[0][1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
@@ -331,89 +361,58 @@ if __name__ == '__main__':
             cv2.imshow(window_name, frame_viz)
 
             key = cv2.waitKey(1) & 0xFF
-            if key == ord('d'):
-                print('>>>> Detect objects...')
-                # get the foreground image of ROI, make sure object is put inside ROI
-                roi_fg = frame[ROI_CORNERS[0][1]: ROI_CORNERS[0][1] + rh, ROI_CORNERS[0][0]: ROI_CORNERS[0][0] + rw, :]
-                # detect objects
-                class_ids, box_confs, boxes = model_yolo.detect_objects(roi_fg, min_box_conf_thresh=THRESH_BOX_CONF_MIN, max_box_conf_thresh=THRESH_BOX_CONF_MAX, class_conf_thresh=THRESH_CLASS_CONF)
                 
-                # detect centroids
-                class_ids, box_confs, boxes, centroids = detect_contours(roi_bg, roi_fg, class_ids, box_confs, boxes, OTSU_LOW_THRESH, OTSU_HIGH_THRESH, OTSU_SENSITIVITY, MIN_AREA, MAX_AREA)
-                
-                # remap the centroids from ROI to full image
-                for i in range(len(centroids)):
-                    centroids[i][0][0] += ROI_CORNERS[0][0]
-                    centroids[i][0][1] += ROI_CORNERS[0][1]
-            if key == ord('x') or not ret_:
+            if len(ROI_CORNERS) == 3 and key == ord('x') and not ret_conveyor:
                 print('>>>> Start conveyor...')
-                ret_ = control_TM_conveyor(tm_robot, 4, 'LOW')
-
-            if ret_:
-                print('>>>> Detect objects...')
-                # get the foreground image of ROI, make sure object is put inside ROI
-                roi_fg = frame[ROI_CORNERS[0][1]: ROI_CORNERS[0][1] + rh, ROI_CORNERS[0][0]: ROI_CORNERS[0][0] + rw, :]
-                # detect objects
-                class_ids, box_confs, boxes = model_yolo.detect_objects(roi_fg, min_box_conf_thresh=THRESH_BOX_CONF_MIN, max_box_conf_thresh=THRESH_BOX_CONF_MAX, class_conf_thresh=THRESH_CLASS_CONF)
-
-                # if the top-left point of bounding box is around the center of the ROI, keep these object to grasp
-                # otherwise, still running the conveyor
-                accepted_ids = []
-                for i, box in enumerate(boxes):
-                    if ROI_CORNERS[0][0] + THRESH_PAD_X < box[i][0] < ROI_CORNERS[1][0] - THRESH_PAD_X:
-                        accepted_ids.append(i)
-
-                class_ids = [class_ids[i] for i in accepted_ids]
-                box_confs = [box_confs[i] for i in accepted_ids]
-                boxes = [boxes[i] for i in accepted_ids]
-
-                # detect centroids
-                class_ids, box_confs, boxes, centroids = detect_contours(roi_bg, roi_fg, class_ids, box_confs, boxes, OTSU_LOW_THRESH, OTSU_HIGH_THRESH, OTSU_SENSITIVITY, MIN_AREA, MAX_AREA)
-
-                # remap the centroids from ROI to full image
-                for i in range(len(centroids)):
-                    centroids[i][0][0] += ROI_CORNERS[0][0]
-                    centroids[i][0][1] += ROI_CORNERS[0][1]
-
-                if len(centroids) > 0:
-                    print('>>>> Stop conveyor...')
-                    ret_ = control_TM_conveyor(tm_robot, 4, 'HIGH')
-
-                    for i, c in enumerate(centroids):
-                        try:
-                            print('>>>> Robot Arm Control...')
-                            XYZ_ = camera.compute_XYZ(c[0][0], c[0][1])
-                            XYZ_ = np.squeeze(XYZ_, axis=1).tolist()
-                            print(f'XYZ_: {XYZ_}')
-
-                            WORLD_POINT_END = XYZ_ + WORLD_POINT_INIT[-3:]
-                            # set Z for grasping
-                            WORLD_POINT_END[2] = Z_WORKING_SPACE + Z_OFFSET
-                            # set RZ for end-effector rotation
-                            print(c[2], c[1])
-                            if c[1][0] < c[1][1]:
-                                # if width < height
-                                angle = 90 - c[2]
-                            else:
-                                angle = -c[2]
-                            print(angle)
-                            WORLD_POINT_END[-1] = WORLD_POINT_END[-1] + angle
-                            print(f'WORLD_POINT_END: {WORLD_POINT_END}')
-
-                            WORLD_POINT_INTER = WORLD_POINT_END.copy()
-                            WORLD_POINT_INTER[2] = WORLD_POINT_INIT[2]
-                            print(f'WORLD_POINT_INTER: {WORLD_POINT_INTER}')
-
-                            control_TM_arm(tm_robot=tm_robot,
-                                           world_point_init=WORLD_POINT_INIT,
-                                           world_point_inter=WORLD_POINT_INTER,
-                                           world_point_end=WORLD_POINT_END)
-                        except rospy.ROSInteruptException:
-                            break
-                    # reset centroids list
-                    centroids.clear()
+                ret_conveyor = control_TM_conveyor(tm_robot, 4, 'HIGH')
+                first_time = True
             elif key == ord('q'):
                 print('>>>> Exit')
                 break
+
+            if len(centroids) > 0:
+                
+                for i, c in enumerate(centroids):
+                    print('>>>> Robot Arm Control...')
+                    XYZ_ = camera.compute_XYZ(c[0][0], c[0][1])
+                    XYZ_ = np.squeeze(XYZ_, axis=1).tolist()
+                    print(f'XYZ_: {XYZ_}')
+
+                    WORLD_POINT_END = XYZ_ + WORLD_POINT_INIT[-3:]
+                    # set Z for grasping
+                    WORLD_POINT_END[2] = Z_WORKING_SPACE + Z_OFFSET
+                    # set RZ for end-effector rotation
+                    print(c[2], c[1])
+                    if c[1][0] < c[1][1]:
+                        # if width < height
+                        angle = 90 - c[2]
+                    else:
+                        angle = -c[2]
+                    print(angle)
+                    WORLD_POINT_END[-1] = WORLD_POINT_END[-1] + angle
+                    print(f'WORLD_POINT_END: {WORLD_POINT_END}')
+
+                    WORLD_POINT_INTER = WORLD_POINT_END.copy()
+                    WORLD_POINT_INTER[2] = WORLD_POINT_INIT[2]
+                    print(f'WORLD_POINT_INTER: {WORLD_POINT_INTER}')
+                    try:
+                        
+                        control_TM_arm(tm_robot=tm_robot,
+                                    world_point_init=WORLD_POINT_INIT,
+                                    world_point_inter=WORLD_POINT_INTER,
+                                    world_point_end=WORLD_POINT_END)
+                    except rospy.ROSInteruptException:
+                        break
+                    
+                # reset centroids list
+                centroids = []
+                boxes = []
+
+                time.sleep(10)
+
+                frame_viz, frame = None, None
+                ret = False
+
+
         ret, frame = cap.read()
-        frame_viz = frame.copy()
+
